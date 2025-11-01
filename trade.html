@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trade — Vanguard Mock</title>
+    <meta name="description" content="Trade page for the Vanguard mock investment platform." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 backdrop-blur">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <a href="./index.html" class="flex items-center gap-2">
+          <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-700 text-white font-bold">V</span>
+          <span class="font-semibold text-lg tracking-tight">Vanguard Mock</span>
+        </a>
+        <a href="./index.html" class="text-sm hover:text-red-700">← Back to Home</a>
+      </div>
+    </header>
+
+    <main class="flex items-center justify-center min-h-[80vh] px-4">
+      <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow p-8 border border-slate-200 dark:border-slate-800">
+        <h1 class="text-2xl font-semibold text-center mb-6">Trade Stocks or Funds</h1>
+        <form class="space-y-5" action="#" method="post">
+          <div>
+            <label for="symbol" class="block text-sm font-medium mb-1">Symbol or Fund Name</label>
+            <input id="symbol" name="symbol" type="text" placeholder="e.g., VFIAX or AAPL" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
+          </div>
+          <div>
+            <label for="action" class="block text-sm font-medium mb-1">Action</label>
+            <select id="action" name="action" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700">
+              <option value="">Select</option>
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="quantity" class="block text-sm font-medium mb-1">Quantity</label>
+              <input id="quantity" name="quantity" type="number" min="1" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
+            </div>
+            <div>
+              <label for="price" class="block text-sm font-medium mb-1">Price Type</label>
+              <select id="price" name="price" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700">
+                <option value="market">Market</option>
+                <option value="limit">Limit</option>
+              </select>
+            </div>
+          </div>
+          <div id="limitPriceContainer" class="hidden">
+            <label for="limitPrice" class="block text-sm font-medium mb-1">Limit Price ($)</label>
+            <input id="limitPrice" name="limitPrice" type="number" step="0.01" min="0" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
+          </div>
+          <button type="submit" class="w-full bg-red-700 hover:bg-red-800 text-white py-2 rounded-lg font-medium transition">Submit Order</button>
+        </form>
+
+        <div class="mt-8 border-t border-slate-200 dark:border-slate-800 pt-6">
+          <h2 class="text-lg font-semibold mb-3">Recent Orders (Mock)</h2>
+          <ul class="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+            <li>• 10 shares of AAPL — <span class="text-green-600">Buy</span> — Market</li>
+            <li>• 5 shares of VFIAX — <span class="text-red-600">Sell</span> — Limit $210.00</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+
+    <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p>© <span id="year"></span> Vanguard Mock. For educational use only.</p>
+    </footer>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      const priceSelect = document.getElementById('price');
+      const limitContainer = document.getElementById('limitPriceContainer');
+
+      priceSelect.addEventListener('change', () => {
+        if (priceSelect.value === 'limit') {
+          limitContainer.classList.remove('hidden');
+        } else {
+          limitContainer.classList.add('hidden');
+        }
+      });
+    </script>
+  </body>
+</html>
