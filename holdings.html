@@ -18,7 +18,11 @@
           <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-700 text-white font-bold">V</span>
           <span class="font-semibold text-lg tracking-tight">Vanguard Mock</span>
         </a>
-        <a href="./index.html" class="text-sm hover:text-red-700">← Back to Home</a>
+        <div class="flex items-center gap-4 text-sm">
+          <a href="./index.html" class="hover:text-red-700">← Back to Home</a>
+          <a id="helpLink" href="./help.html" class="hover:text-red-700">Help</a>
+        </div>
+
       </div>
     </header>
 
@@ -106,7 +110,15 @@
     </footer>
 
     <script>
-      document.getElementById('year').textContent = new Date().getFullYear();
-    </script>
+    // Set current year in footer
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Dynamically append ?from=<page-name> to Help link
+    const help = document.getElementById('helpLink');
+    if (help) {
+      const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
+      help.href = `./help.html?from=${from}`;
+    }
+  </script>
   </body>
 </html>
