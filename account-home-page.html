@@ -64,5 +64,16 @@
     <script>
       document.getElementById('year').textContent = new Date().getFullYear();
     </script>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      // Dynamically append ?from=<page-name> to Help link
+      const help = document.getElementById('helpLink');
+      if (help) {
+        const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
+        help.href = `./help.html?from=${from}`;
+      }
+  </script>
   </body>
 </html>
