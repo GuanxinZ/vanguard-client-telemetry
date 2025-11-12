@@ -18,7 +18,11 @@
           <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-700 text-white font-bold">V</span>
           <span class="font-semibold text-lg tracking-tight">Vanguard Mock</span>
         </a>
-        <a href="./index.html" class="text-sm hover:text-red-700">← Back to Home</a>
+        <div class="flex items-center gap-4 text-sm">
+          <a href="./index.html" class="hover:text-red-700">← Back to Home</a>
+          <a id="helpLink" href="./help.html" class="hover:text-red-700">Help</a>
+        </div>
+
       </div>
     </header>
 
@@ -73,18 +77,23 @@
     </footer>
 
     <script>
-      document.getElementById('year').textContent = new Date().getFullYear();
+    // Update footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
 
-      const priceSelect = document.getElementById('price');
-      const limitContainer = document.getElementById('limitPriceContainer');
+    // Show/hide limit price input
+    const priceSelect = document.getElementById('price');
+    const limitContainer = document.getElementById('limitPriceContainer');
+    priceSelect.addEventListener('change', () => {
+      limitContainer.classList.toggle('hidden', priceSelect.value !== 'limit');
+    });
 
-      priceSelect.addEventListener('change', () => {
-        if (priceSelect.value === 'limit') {
-          limitContainer.classList.remove('hidden');
-        } else {
-          limitContainer.classList.add('hidden');
-        }
-      });
-    </script>
+    // Add Help link tracking (?from=trade.html)
+    const help = document.getElementById('helpLink');
+    if (help) {
+      const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
+      help.href = `./help.html?from=${from}`;
+    }
+  </script>
+
   </body>
 </html>
