@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
   </head>
+
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 backdrop-blur">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -18,44 +19,57 @@
           <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-700 text-white font-bold">V</span>
           <span class="font-semibold text-lg tracking-tight">Vanguard Mock</span>
         </a>
+
         <div class="flex items-center gap-4 text-sm">
           <a href="./index.html" class="hover:text-red-700">← Back to Home</a>
           <a id="helpLink" href="./help.html" class="hover:text-red-700">Help</a>
         </div>
-
       </div>
     </header>
 
     <main class="flex items-center justify-center min-h-[80vh] px-4">
       <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow p-8 border border-slate-200 dark:border-slate-800">
+        
         <h1 class="text-2xl font-semibold text-center mb-6">Log In to Your Account</h1>
-        <form class="space-y-5" action="#" method="post">
+
+        <form id="loginForm" class="space-y-5" novalidate>
           <div>
             <label for="username" class="block text-sm font-medium mb-1">Username or Email</label>
-            <input id="username" name="username" type="text" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
+            <input id="username" name="username" type="text" required
+              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
           </div>
+
           <div>
             <label for="password" class="block text-sm font-medium mb-1">Password</label>
-            <input id="password" name="password" type="password" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
+            <input id="password" name="password" type="password" required
+              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
           </div>
+
           <div class="flex items-center justify-between text-sm">
             <label class="flex items-center gap-2">
-              <input type="checkbox" class="rounded border-slate-300 dark:border-slate-700" /> Remember me
+              <input id="rememberMe" type="checkbox" class="rounded border-slate-300 dark:border-slate-700" /> Remember me
             </label>
-            <a href="#" class="text-red-700 hover:underline">Forgot password?</a>
+            <a id="forgotPw" href="#" class="text-red-700 hover:underline">Forgot password?</a>
           </div>
-            <button
+
+          <button
             id="loginBtn"
-            type="button"
+            type="submit"
             class="w-full bg-red-700 hover:bg-red-800 text-white py-2 rounded-lg font-medium transition"
-            >
+          >
             Log In
-            </button>
+          </button>
+
+          <p id="loginError" class="text-sm text-red-700 text-center mt-2 hidden">
+            Invalid username or password. Please try again.
+          </p>
         </form>
+
         <p class="text-sm text-center text-slate-500 dark:text-slate-400 mt-6">
           Don’t have an account?
           <a href="./create-account.html" class="text-red-700 hover:underline">Create one here</a>
         </p>
+
       </div>
     </main>
 
@@ -64,21 +78,100 @@
     </footer>
 
     <script>
-    // Update footer year
-    document.getElementById('year').textContent = new Date().getFullYear();
+      document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Handle login redirect (mock)
-    const loginButton = document.getElementById("loginBtn");
-    loginButton.addEventListener("click", () => {
-      window.location.href = "./account-home-page.html";
-    });
+      // Append ?from=<page> to Help link
+      const help = document.getElementById('helpLink');
+      if (help) {
+        const from = encodeURIComponent(location.pathname.split('/').pop() || 'login.html');
+        help.href = `./help.html?from=${from}`;
+      }
 
-    // Append ?from=<page-name> to Help link
-    const help = document.getElementById('helpLink');
-    if (help) {
-      const from = encodeURIComponent(location.pathname.split('/').pop() || 'login.html');
-      help.href = `./help.html?from=${from}`;
-    }
-  </script>
+      /* -------------------------
+         Minimal Telemetry Setup
+      -------------------------- */
+      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random()*100000)}`;
+      localStorage.setItem('session_id', sessionId);
+
+      const userId = localStorage.getItem('user_id') || 'U-mock';
+      localStorage.setItem('user_id', userId);
+
+      const page = "login";
+
+      function emit(event_type, metadata = {}) {
+        const evt = {
+          session_id: sessionId,
+          user_id: userId,
+          page,
+          event_type,
+          timestamp: new Date().toISOString(),
+          metadata
+        };
+        console.log("Telemetry:", evt);
+      }
+
+      // Page view + dwell time
+      const startTs = performance.now();
+      emit("page_view");
+
+      window.addEventListener("beforeunload", () => {
+        const dwellMs = Math.round(performance.now() - startTs);
+        emit("dwell_time", { ms: dwellMs });
+      });
+
+      // Field focus
+      ["username", "password"].forEach(id => {
+        document.getElementById(id).addEventListener("focus", () => {
+          emit("field_focus", { field: id });
+        });
+      });
+
+      // Remember me toggle
+      document.getElementById("rememberMe").addEventListener("change", (e) => {
+        emit("remember_toggle", { value: e.target.checked });
+      });
+
+      // Forgot password click
+      document.getElementById("forgotPw").addEventListener("click", () => {
+        emit("forgot_password_click");
+        alert("Mock password reset flow.");
+      });
+
+      /* -------------------------
+         Login Submit Simulation
+      -------------------------- */
+      const loginForm = document.getElementById("loginForm");
+      const loginError = document.getElementById("loginError");
+
+      loginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById("username").value.trim();
+        const pw = document.getElementById("password").value.trim();
+
+        // Random failure chance (simulating backend issues)
+        const randomFail = Math.random() < 0.20;
+
+        if (randomFail) {
+          loginError.textContent = "System error. Try again."
+          loginError.classList.remove("hidden");
+          emit("login_error", { reason: "system_failure" });
+          return;
+        }
+
+        // Mock credential validation
+        if (username === "" || pw === "" || pw.length < 3) {
+          loginError.textContent = "Invalid username or password.";
+          loginError.classList.remove("hidden");
+          emit("login_error", { reason: "invalid_credentials" });
+          return;
+        }
+
+        // Success
+        emit("login_success", { username });
+        window.location.href = "./account-home-page.html";
+      });
+    </script>
+
   </body>
 </html>
