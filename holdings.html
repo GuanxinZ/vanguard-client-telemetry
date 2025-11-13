@@ -22,11 +22,10 @@
           <a href="./index.html" class="hover:text-red-700">← Back to Home</a>
           <a id="helpLink" href="./help.html" class="hover:text-red-700">Help</a>
         </div>
-
       </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10" id="main">
       <h1 class="text-2xl font-semibold mb-6">Account Overview</h1>
 
       <!-- Summary Cards -->
@@ -52,7 +51,7 @@
           <div class="text-sm text-slate-500">(Mock data)</div>
         </div>
         <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
+          <table class="min-w-full text-sm" id="holdingsTable">
             <thead class="bg-slate-50 dark:bg-slate-800/50">
               <tr class="text-left">
                 <th class="px-6 py-3 font-medium">Symbol</th>
@@ -66,7 +65,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr class="border-t border-slate-200 dark:border-slate-800">
+              <tr class="border-t border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40" data-symbol="VFIAX">
                 <td class="px-6 py-3 font-medium">VFIAX</td>
                 <td class="px-6 py-3">Vanguard 500 Index Admiral</td>
                 <td class="px-6 py-3 text-right">120.000</td>
@@ -76,7 +75,7 @@
                 <td class="px-6 py-3 text-right text-green-600">+$624.00</td>
                 <td class="px-6 py-3 text-right">38.8%</td>
               </tr>
-              <tr class="border-t border-slate-200 dark:border-slate-800">
+              <tr class="border-t border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40" data-symbol="VTI">
                 <td class="px-6 py-3 font-medium">VTI</td>
                 <td class="px-6 py-3">Vanguard Total Stock Market ETF</td>
                 <td class="px-6 py-3 text-right">200.000</td>
@@ -86,7 +85,7 @@
                 <td class="px-6 py-3 text-right text-green-600">+$470.00</td>
                 <td class="px-6 py-3 text-right">40.8%</td>
               </tr>
-              <tr class="border-t border-slate-200 dark:border-slate-800">
+              <tr class="border-t border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40" data-symbol="BND">
                 <td class="px-6 py-3 font-medium">BND</td>
                 <td class="px-6 py-3">Vanguard Total Bond Market ETF</td>
                 <td class="px-6 py-3 text-right">300.000</td>
@@ -102,7 +101,24 @@
       </section>
 
       <!-- Notes -->
-      <p class="text-xs text-slate-500 dark:text-slate-400 mt-4">Data shown above is mock data for layout testing only.</p>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-4">
+        Data shown above is mock data for layout testing only.
+      </p>
+
+      <!-- Statements section (for frustration / workflow telemetry) -->
+      <section class="mt-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 max-w-2xl">
+        <h2 class="text-lg font-semibold mb-2">Statements</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">
+          Download your latest monthly statement (mock).
+        </p>
+        <button
+          id="downloadStatementsBtn"
+          class="px-4 py-2 rounded-xl bg-red-700 text-white hover:bg-red-800 text-sm font-medium"
+        >
+          Download latest statement (PDF)
+        </button>
+        <p id="statementsStatus" class="mt-2 text-xs text-slate-500 dark:text-slate-400"></p>
+      </section>
     </main>
 
     <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
@@ -110,15 +126,72 @@
     </footer>
 
     <script>
-    // Set current year in footer
-    document.getElementById('year').textContent = new Date().getFullYear();
+      // Set current year in footer
+      document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Dynamically append ?from=<page-name> to Help link
-    const help = document.getElementById('helpLink');
-    if (help) {
-      const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
-      help.href = `./help.html?from=${from}`;
-    }
-  </script>
+      // Dynamically append ?from=<page-name> to Help link
+      const help = document.getElementById('helpLink');
+      if (help) {
+        const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
+        help.href = `./help.html?from=${from}`;
+      }
+
+      // --- Minimal telemetry helpers (Behavioral) ---
+      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
+      localStorage.setItem('session_id', sessionId);
+      const userId = localStorage.getItem('user_id') || 'U-mock';
+      localStorage.setItem('user_id', userId);
+      const page = 'holdings';
+
+      function emit(event_type, metadata = {}) {
+        const evt = {
+          session_id: sessionId,
+          user_id: userId,
+          page,
+          event_type,
+          timestamp: new Date().toISOString(),
+          metadata
+        };
+        console.log('Telemetry:', evt);
+      }
+
+      // page view + dwell time
+      const startTs = performance.now();
+      emit('page_view');
+
+      window.addEventListener('beforeunload', () => {
+        const dwellMs = Math.round(performance.now() - startTs);
+        emit('dwell_time', { ms: dwellMs });
+      });
+
+      // Row clicks (user exploring holdings)
+      document.querySelectorAll('#holdingsTable tbody tr[data-symbol]').forEach(row => {
+        row.addEventListener('click', () => {
+          const symbol = row.dataset.symbol;
+          emit('holding_row_click', { symbol });
+        });
+      });
+
+      // Statements button: simulate failure to complete task
+      const statementsBtn = document.getElementById('downloadStatementsBtn');
+      const statementsStatus = document.getElementById('statementsStatus');
+
+      if (statementsBtn) {
+        statementsBtn.addEventListener('click', () => {
+          emit('statements_click');
+          // Simulate a "task failed successfully" type error
+          const fail = Math.random() < 0.6; // 60% fail to create frustration examples
+          if (fail) {
+            statementsStatus.textContent = 'We could not retrieve your statement. Please try again later.';
+            statementsStatus.className = 'mt-2 text-xs text-red-700';
+            emit('statements_error', { reason: 'mock_unavailable' });
+          } else {
+            statementsStatus.textContent = 'Your statement download has started (mock).';
+            statementsStatus.className = 'mt-2 text-xs text-green-700';
+            emit('statements_success');
+          }
+        });
+      }
+    </script>
   </body>
 </html>
