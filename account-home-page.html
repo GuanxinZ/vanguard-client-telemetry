@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Vanguard Mock — Home</title>
+    <title>Vanguard Mock — Account Home</title>
     <meta name="description" content="A mock Vanguard website for learning and demonstration purposes." />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -12,24 +12,37 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
-    <a href="#main" class="sr-only focus:not-sr-only focus:ring-2 focus:ring-blue-500 focus:bg-white focus:text-blue-700 px-3 py-2 absolute left-4 top-4 z-50 rounded">Skip to content</a>
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:ring-2 focus:ring-blue-500 focus:bg-white focus:text-blue-700 px-3 py-2 absolute left-4 top-4 z-50 rounded"
+    >
+      Skip to content
+    </a>
 
-    <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/70 backdrop-blur border-b border-slate-200/70 dark:border-slate-800">
+    <header
+      class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/70 backdrop-blur border-b border-slate-200/70 dark:border-slate-800"
+    >
       <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="flex h-16 items-center justify-between">
-          <a href="#" class="flex items-center gap-2">
+          <a href="./account-home-page.html" class="flex items-center gap-2">
             <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-700 text-white font-bold">V</span>
             <span class="font-semibold text-lg tracking-tight">Vanguard Mock</span>
           </a>
 
           <nav class="flex items-center gap-6" aria-label="Main navigation">
-            <a class="hover:text-red-700" href="./trade.html">Trade</a>
-            <a class="hover:text-red-700" href="./holdings.html">Holdings</a>
-            <a class="hover:text-red-700" id="helpLink" href="./help.html">Help</a>
+            <a class="hover:text-red-700" href="./trade.html" data-nav="trade">Trade</a>
+            <a class="hover:text-red-700" href="./holdings.html" data-nav="holdings">Holdings</a>
+            <a class="hover:text-red-700" id="helpLink" href="./help.html" data-nav="help">Help</a>
           </nav>
 
           <div class="flex items-center gap-3">
-            <a href="./index.html" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-red-700 hover:text-red-700 transition">Log Out</a>
+            <a
+              href="./index.html"
+              class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-red-700 hover:text-red-700 transition"
+              data-nav="logout"
+            >
+              Log Out
+            </a>
           </div>
         </div>
       </div>
@@ -40,8 +53,15 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20 lg:py-24">
           <div class="grid lg:grid-cols-2 gap-10 items-center">
             <div>
-              <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight">Mock Vanguard Website for Client Telemetry Project</h1>
-              <p class="mt-4 text-slate-600 dark:text-slate-300">This project includes four main pages: <span class="font-medium">Login</span>, <span class="font-medium">Create Account</span>, <span class="font-medium">Trade</span>, and <span class="font-medium">Holdings</span>.</p>
+              <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight">
+                Mock Vanguard Website for Client Telemetry Project
+              </h1>
+              <p class="mt-4 text-slate-600 dark:text-slate-300">
+                From here, you can view your
+                <span class="font-medium">Holdings</span>, place a
+                <span class="font-medium">Trade</span>, or visit
+                <span class="font-medium">Help</span> if something isn’t working as expected.
+              </p>
             </div>
           </div>
         </div>
@@ -55,25 +75,61 @@
           <nav class="flex gap-4">
             <a class="hover:text-red-700" href="#">Privacy</a>
             <a class="hover:text-red-700" href="#">Terms</a>
-            <a class="hover:text-red-700" href="#">Help</a>
+            <a class="hover:text-red-700" href="./help.html" data-nav="footer-help">Help</a>
           </nav>
         </div>
       </div>
     </footer>
 
     <script>
-      document.getElementById('year').textContent = new Date().getFullYear();
-    </script>
-
-    <script>
+      // Footer year
       document.getElementById('year').textContent = new Date().getFullYear();
 
-      // Dynamically append ?from=<page-name> to Help link
+      // --- Shared telemetry setup for account home page ---
+      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
+      localStorage.setItem('session_id', sessionId);
+
+      const userId = localStorage.getItem('user_id') || 'U-mock';
+      localStorage.setItem('user_id', userId);
+
+      const page = 'account_home';
+
+      function emit(event_type, metadata = {}) {
+        const evt = {
+          session_id: sessionId,
+          user_id: userId,
+          page,
+          event_type,
+          timestamp: new Date().toISOString(),
+          metadata,
+        };
+        console.log('Telemetry:', evt);
+      }
+
+      // Page view + dwell time
+      const startTs = performance.now();
+      emit('page_view');
+
+      window.addEventListener('beforeunload', () => {
+        const dwellMs = Math.round(performance.now() - startTs);
+        emit('dwell_time', { ms: dwellMs });
+      });
+
+      // Navigation click telemetry
+      document.querySelectorAll('[data-nav]').forEach((el) => {
+        el.addEventListener('click', () => {
+          emit('nav_click', { target: el.dataset.nav || 'unknown' });
+        });
+      });
+
+      // Dynamically append ?from=<page-name> to Help link for context
       const help = document.getElementById('helpLink');
       if (help) {
-        const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
-        help.href = `./help.html?from=${from}`;
+        const from = 'account_home';
+        const url = new URL(help.href, window.location.origin);
+        url.searchParams.set('from', from);
+        help.href = url.pathname + url.search;
       }
-  </script>
+    </script>
   </body>
 </html>
