@@ -22,21 +22,32 @@
           <a href="./index.html" class="hover:text-red-700">← Back to Home</a>
           <a id="helpLink" href="./help.html" class="hover:text-red-700">Help</a>
         </div>
-
       </div>
     </header>
 
     <main class="flex items-center justify-center min-h-[80vh] px-4">
       <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow p-8 border border-slate-200 dark:border-slate-800">
         <h1 class="text-2xl font-semibold text-center mb-6">Trade Stocks or Funds</h1>
-        <form class="space-y-5" action="#" method="post">
+        <form id="tradeForm" class="space-y-5" action="#" method="post" novalidate>
           <div>
             <label for="symbol" class="block text-sm font-medium mb-1">Symbol or Fund Name</label>
-            <input id="symbol" name="symbol" type="text" placeholder="e.g., VFIAX or AAPL" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
+            <input
+              id="symbol"
+              name="symbol"
+              type="text"
+              placeholder="e.g., VFIAX or AAPL"
+              required
+              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
+            />
           </div>
           <div>
             <label for="action" class="block text-sm font-medium mb-1">Action</label>
-            <select id="action" name="action" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700">
+            <select
+              id="action"
+              name="action"
+              required
+              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700"
+            >
               <option value="">Select</option>
               <option value="buy">Buy</option>
               <option value="sell">Sell</option>
@@ -45,11 +56,23 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="quantity" class="block text-sm font-medium mb-1">Quantity</label>
-              <input id="quantity" name="quantity" type="number" min="1" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
+              <input
+                id="quantity"
+                name="quantity"
+                type="number"
+                min="1"
+                required
+                class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
+              />
             </div>
             <div>
               <label for="price" class="block text-sm font-medium mb-1">Price Type</label>
-              <select id="price" name="price" required class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700">
+              <select
+                id="price"
+                name="price"
+                required
+                class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700"
+              >
                 <option value="market">Market</option>
                 <option value="limit">Limit</option>
               </select>
@@ -57,9 +80,22 @@
           </div>
           <div id="limitPriceContainer" class="hidden">
             <label for="limitPrice" class="block text-sm font-medium mb-1">Limit Price ($)</label>
-            <input id="limitPrice" name="limitPrice" type="number" step="0.01" min="0" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700" />
+            <input
+              id="limitPrice"
+              name="limitPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
+            />
           </div>
-          <button type="submit" class="w-full bg-red-700 hover:bg-red-800 text-white py-2 rounded-lg font-medium transition">Submit Order</button>
+          <button
+            type="submit"
+            class="w-full bg-red-700 hover:bg-red-800 text-white py-2 rounded-lg font-medium transition"
+          >
+            Submit Order
+          </button>
+          <p id="tradeStatus" class="text-sm mt-2"></p>
         </form>
 
         <div class="mt-8 border-t border-slate-200 dark:border-slate-800 pt-6">
@@ -77,23 +113,152 @@
     </footer>
 
     <script>
-    // Update footer year
-    document.getElementById('year').textContent = new Date().getFullYear();
+      // --- Basic footer + help link context ---
+      document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Show/hide limit price input
-    const priceSelect = document.getElementById('price');
-    const limitContainer = document.getElementById('limitPriceContainer');
-    priceSelect.addEventListener('change', () => {
-      limitContainer.classList.toggle('hidden', priceSelect.value !== 'limit');
-    });
+      const help = document.getElementById('helpLink');
+      if (help) {
+        const from = encodeURIComponent(location.pathname.split('/').pop() || 'trade.html');
+        help.href = `./help.html?from=${from}`;
+      }
 
-    // Add Help link tracking (?from=trade.html)
-    const help = document.getElementById('helpLink');
-    if (help) {
-      const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
-      help.href = `./help.html?from=${from}`;
-    }
-  </script>
+      // --- Telemetry setup (behavioral/system-ish events on Trade page) ---
+      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
+      localStorage.setItem('session_id', sessionId);
+      const userId = localStorage.getItem('user_id') || 'U-mock';
+      localStorage.setItem('user_id', userId);
+      const page = 'trade';
 
+      function emit(event_type, metadata = {}) {
+        const evt = {
+          session_id: sessionId,
+          user_id: userId,
+          page,
+          event_type,
+          timestamp: new Date().toISOString(),
+          metadata
+        };
+        console.log('Telemetry:', evt);
+      }
+
+      // Page view + dwell time
+      const startTs = performance.now();
+      emit('page_view');
+
+      window.addEventListener('beforeunload', () => {
+        const dwellMs = Math.round(performance.now() - startTs);
+        emit('dwell_time', { ms: dwellMs });
+      });
+
+      // Form + inputs
+      const tradeForm = document.getElementById('tradeForm');
+      const symbolInput = document.getElementById('symbol');
+      const actionSelect = document.getElementById('action');
+      const quantityInput = document.getElementById('quantity');
+      const priceSelect = document.getElementById('price');
+      const limitContainer = document.getElementById('limitPriceContainer');
+      const limitPriceInput = document.getElementById('limitPrice');
+      const statusEl = document.getElementById('tradeStatus');
+
+      // Show/hide limit price input and emit toggle
+      priceSelect.addEventListener('change', () => {
+        const isLimit = priceSelect.value === 'limit';
+        limitContainer.classList.toggle('hidden', !isLimit);
+        emit('price_type_change', { price_type: priceSelect.value });
+      });
+
+      // Simple field change telemetry
+      symbolInput.addEventListener('blur', () => {
+        if (symbolInput.value.trim().length > 0) {
+          emit('field_change', { field: 'symbol', length: symbolInput.value.trim().length });
+        }
+      });
+
+      quantityInput.addEventListener('blur', () => {
+        const q = Number(quantityInput.value);
+        if (!Number.isNaN(q) && q > 0) {
+          emit('field_change', { field: 'quantity', value: q });
+        }
+      });
+
+      actionSelect.addEventListener('change', () => {
+        if (actionSelect.value) {
+          emit('field_change', { field: 'action', value: actionSelect.value });
+        }
+      });
+
+      // Track when user focuses on the form (for potential abandonment analysis)
+      let formOpened = false;
+      tradeForm.addEventListener('focusin', () => {
+        if (!formOpened) {
+          formOpened = true;
+          emit('trade_form_open');
+          // If no submit after 120s, treat as potential abandonment
+          setTimeout(() => {
+            if (formOpened) {
+              emit('trade_form_abandon', { after_s: 120 });
+            }
+          }, 120000);
+        }
+      });
+
+      // Handle submit with mock success / failure
+      tradeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        statusEl.textContent = '';
+        statusEl.className = 'text-sm mt-2';
+
+        const symbol = symbolInput.value.trim();
+        const action = actionSelect.value;
+        const qty = Number(quantityInput.value);
+        const priceType = priceSelect.value;
+        const limitPrice = priceType === 'limit' ? Number(limitPriceInput.value) : null;
+
+        const missingFields = [];
+        if (!symbol) missingFields.push('symbol');
+        if (!action) missingFields.push('action');
+        if (!qty || qty <= 0) missingFields.push('quantity');
+        if (priceType === 'limit' && (!limitPrice || limitPrice <= 0)) {
+          missingFields.push('limitPrice');
+        }
+
+        if (missingFields.length > 0) {
+          statusEl.textContent = 'Please fill out all required fields.';
+          statusEl.classList.add('text-red-700');
+          emit('trade_submit_error', {
+            reason: 'validation',
+            missing_fields: missingFields
+          });
+          return;
+        }
+
+        // Simulate system-level rejection sometimes to create "frustration"
+        const mockFail = Math.random() < 0.3; // 30% rejection
+
+        if (mockFail) {
+          statusEl.textContent = 'Your order could not be submitted. Please review your order details and try again.';
+          statusEl.classList.add('text-red-700');
+          emit('trade_submit_error', {
+            reason: 'mock_rejection',
+            action,
+            price_type: priceType,
+            quantity: qty,
+            has_limit_price: priceType === 'limit'
+          });
+        } else {
+          statusEl.textContent = 'Order submitted successfully (mock).';
+          statusEl.classList.add('text-green-700');
+          emit('trade_submit_success', {
+            action,
+            price_type: priceType,
+            quantity: qty,
+            limit_price: priceType === 'limit' ? limitPrice : null
+          });
+          formOpened = false;
+          tradeForm.reset();
+          limitContainer.classList.add('hidden');
+        }
+      });
+    </script>
   </body>
 </html>
