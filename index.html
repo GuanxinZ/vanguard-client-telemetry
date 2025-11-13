@@ -12,7 +12,12 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
-    <a href="#main" class="sr-only focus:not-sr-only focus:ring-2 focus:ring-blue-500 focus:bg-white focus:text-blue-700 px-3 py-2 absolute left-4 top-4 z-50 rounded">Skip to content</a>
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:ring-2 focus:ring-blue-500 focus:bg-white focus:text-blue-700 px-3 py-2 absolute left-4 top-4 z-50 rounded"
+    >
+      Skip to content
+    </a>
 
     <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/70 backdrop-blur border-b border-slate-200/70 dark:border-slate-800">
       <div class="max-w-7xl mx-auto px-4 sm:px-6">
@@ -28,8 +33,20 @@
           </nav>
 
           <div class="flex items-center gap-3">
-            <a href="./login.html" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-red-700 hover:text-red-700 transition">Login</a>
-            <a href="./create-account.html" class="px-4 py-2 rounded-xl bg-red-700 text-white hover:bg-red-800 transition">Create Account</a>
+            <a
+              id="loginCta"
+              href="./login.html"
+              class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-red-700 hover:text-red-700 transition"
+            >
+              Login
+            </a>
+            <a
+              id="createAccountCta"
+              href="./create-account.html"
+              class="px-4 py-2 rounded-xl bg-red-700 text-white hover:bg-red-800 transition"
+            >
+              Create Account
+            </a>
           </div>
         </div>
       </div>
@@ -40,11 +57,31 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20 lg:py-24">
           <div class="grid lg:grid-cols-2 gap-10 items-center">
             <div>
-              <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight">Mock Vanguard Website for Client Telemetry Project</h1>
-              <p class="mt-4 text-slate-600 dark:text-slate-300">This project includes four main pages: <span class="font-medium">Login</span>, <span class="font-medium">Create Account</span>, <span class="font-medium">Trade</span>, and <span class="font-medium">Holdings</span>.</p>
+              <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight">
+                Mock Vanguard Website for Client Telemetry Project
+              </h1>
+              <p class="mt-4 text-slate-600 dark:text-slate-300">
+                This project includes four main pages:
+                <span class="font-medium">Login</span>,
+                <span class="font-medium">Create Account</span>,
+                <span class="font-medium">Trade</span>, and
+                <span class="font-medium">Holdings</span>.
+              </p>
               <div class="mt-6 flex flex-wrap gap-3">
-                <a href="./create-account.html" class="px-5 py-3 rounded-xl bg-red-700 text-white hover:bg-red-800 transition">Create an Account</a>
-                <a href="./login.html" class="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-red-700 hover:text-red-700 transition">Log In</a>
+                <a
+                  id="createAccountCtaMain"
+                  href="./create-account.html"
+                  class="px-5 py-3 rounded-xl bg-red-700 text-white hover:bg-red-800 transition"
+                >
+                  Create an Account
+                </a>
+                <a
+                  id="loginCtaMain"
+                  href="./login.html"
+                  class="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-red-700 hover:text-red-700 transition"
+                >
+                  Log In
+                </a>
               </div>
             </div>
           </div>
@@ -59,22 +96,63 @@
           <nav class="flex gap-4">
             <a class="hover:text-red-700" href="#">Privacy</a>
             <a class="hover:text-red-700" href="#">Terms</a>
-            <a class="hover:text-red-700" href="#">Help</a>
+            <a class="hover:text-red-700" href="./help.html">Help</a>
           </nav>
         </div>
       </div>
     </footer>
 
     <script>
-    // Set current year in footer
-    document.getElementById('year').textContent = new Date().getFullYear();
+      // --- Basic footer + Help link context ---
+      document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Dynamically append ?from=<page-name> to Help link
-    const help = document.getElementById('helpLink');
-    if (help) {
-      const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
-      help.href = `./help.html?from=${from}`;
-    }
-  </script>
+      const help = document.getElementById('helpLink');
+      if (help) {
+        const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
+        help.href = `./help.html?from=${from}`;
+      }
+
+      // --- Minimal telemetry for behavioral metrics on home page ---
+      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
+      localStorage.setItem('session_id', sessionId);
+      const userId = localStorage.getItem('user_id') || 'U-guest';
+      localStorage.setItem('user_id', userId);
+      const page = 'home';
+
+      function emit(event_type, metadata = {}) {
+        const evt = {
+          session_id: sessionId,
+          user_id: userId,
+          page,
+          event_type,
+          timestamp: new Date().toISOString(),
+          metadata,
+        };
+        console.log('Telemetry:', evt);
+      }
+
+      // page view + dwell time
+      const startTs = performance.now();
+      emit('page_view');
+
+      window.addEventListener('beforeunload', () => {
+        const dwellMs = Math.round(performance.now() - startTs);
+        emit('dwell_time', { ms: dwellMs });
+      });
+
+      // CTA clicks (top-right + hero buttons)
+      function trackClick(elId, target) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.addEventListener('click', () => {
+          emit('cta_click', { target });
+        });
+      }
+
+      trackClick('loginCta', 'login_header');
+      trackClick('createAccountCta', 'create_header');
+      trackClick('loginCtaMain', 'login_main');
+      trackClick('createAccountCtaMain', 'create_main');
+    </script>
   </body>
 </html>
