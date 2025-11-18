@@ -227,6 +227,10 @@
 
       const page = 'help';
 
+      // Read ?from=... to know which page sent the user here
+      const params = new URLSearchParams(window.location.search);
+      const fromPage = params.get('from') || 'unknown';
+
       function emit(event_type, metadata = {}) {
         const evt = {
           session_id: sessionId,
@@ -355,3 +359,4 @@
     </script>
   </body>
 </html>
+
