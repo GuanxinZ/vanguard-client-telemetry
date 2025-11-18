@@ -8,14 +8,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
-    <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 backdrop-blur">
+    <!-- Header -->
+    <header
+      class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 backdrop-blur"
+    >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <a href="./index.html" class="flex items-center gap-2">
-          <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-700 text-white font-bold">V</span>
+          <span
+            class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-700 text-white font-bold"
+            >V</span
+          >
           <span class="font-semibold text-lg tracking-tight">Vanguard Mock</span>
         </a>
         <div class="flex items-center gap-4 text-sm">
@@ -25,77 +34,193 @@
       </div>
     </header>
 
+    <!-- Main -->
     <main class="flex items-center justify-center min-h-[80vh] px-4">
-      <div class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow p-8 border border-slate-200 dark:border-slate-800">
-        <h1 class="text-2xl font-semibold text-center mb-6">Trade Stocks or Funds</h1>
-        <form id="tradeForm" class="space-y-5" action="#" method="post" novalidate>
-          <div>
-            <label for="symbol" class="block text-sm font-medium mb-1">Symbol or Fund Name</label>
-            <input
-              id="symbol"
-              name="symbol"
-              type="text"
-              placeholder="e.g., VFIAX or AAPL"
-              required
-              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
-            />
-          </div>
-          <div>
-            <label for="action" class="block text-sm font-medium mb-1">Action</label>
-            <select
-              id="action"
-              name="action"
-              required
-              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700"
+      <div
+        class="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow p-8 border border-slate-200 dark:border-slate-800"
+      >
+        <h1 class="text-2xl font-semibold text-center mb-2">Trade Stocks or Funds</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 text-center mb-6">
+          Complete the steps below to place a trade (mock).
+        </p>
+
+        <!-- Step indicator -->
+        <ol class="flex items-center justify-between text-xs mb-6">
+          <li id="stepLabel1" class="flex-1 flex items-center gap-2">
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-red-700 text-red-700 text-xs font-semibold"
+              >1</span
             >
-              <option value="">Select</option>
-              <option value="buy">Buy</option>
-              <option value="sell">Sell</option>
-            </select>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
+            <span>Select investment</span>
+          </li>
+          <li id="stepLabel2" class="flex-1 flex items-center gap-2 justify-center text-slate-400">
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold"
+              >2</span
+            >
+            <span>Order details</span>
+          </li>
+          <li id="stepLabel3" class="flex-1 flex items-center gap-2 justify-end text-slate-400">
+            <span
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold"
+              >3</span
+            >
+            <span>Review &amp; confirm</span>
+          </li>
+        </ol>
+
+        <form id="tradeForm" class="space-y-6" action="#" method="post" novalidate>
+          <!-- STEP 1: SYMBOL -->
+          <section id="step1">
+            <h2 class="text-lg font-semibold mb-4">Step 1: Select investment</h2>
             <div>
-              <label for="quantity" class="block text-sm font-medium mb-1">Quantity</label>
+              <label for="symbol" class="block text-sm font-medium mb-1">Symbol or Fund Name</label>
               <input
-                id="quantity"
-                name="quantity"
-                type="number"
-                min="1"
+                id="symbol"
+                name="symbol"
+                type="text"
+                placeholder="e.g., VFIAX or AAPL"
                 required
                 class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
               />
+              <p class="text-xs text-slate-500 mt-1">
+                Start by choosing the stock or fund you want to trade.
+              </p>
             </div>
-            <div>
-              <label for="price" class="block text-sm font-medium mb-1">Price Type</label>
-              <select
-                id="price"
-                name="price"
-                required
-                class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700"
+          </section>
+
+          <!-- STEP 2: ORDER DETAILS -->
+          <section id="step2" class="hidden">
+            <h2 class="text-lg font-semibold mb-4">Step 2: Order details</h2>
+            <div class="space-y-4">
+              <div>
+                <label for="action" class="block text-sm font-medium mb-1">Action</label>
+                <select
+                  id="action"
+                  name="action"
+                  required
+                  class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700"
+                >
+                  <option value="">Select</option>
+                  <option value="buy">Buy</option>
+                  <option value="sell">Sell</option>
+                </select>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label for="quantity" class="block text-sm font-medium mb-1">Quantity</label>
+                  <input
+                    id="quantity"
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    required
+                    class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
+                  />
+                </div>
+                <div>
+                  <label for="price" class="block text-sm font-medium mb-1">Price Type</label>
+                  <select
+                    id="price"
+                    name="price"
+                    required
+                    class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-red-700"
+                  >
+                    <option value="market">Market</option>
+                    <option value="limit">Limit</option>
+                  </select>
+                </div>
+              </div>
+              <div id="limitPriceContainer" class="hidden">
+                <label for="limitPrice" class="block text-sm font-medium mb-1">Limit Price ($)</label>
+                <input
+                  id="limitPrice"
+                  name="limitPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
+                />
+                <p class="text-xs text-slate-500 mt-1">
+                  Your order will only execute if the market reaches this price.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 3: REVIEW -->
+          <section id="step3" class="hidden">
+            <h2 class="text-lg font-semibold mb-4">Step 3: Review &amp; confirm</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">
+              Please review your order before submitting. This is a mock flow; no real trades will be
+              placed.
+            </p>
+            <div
+              class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4 text-sm"
+            >
+              <dl class="space-y-2">
+                <div class="flex justify-between">
+                  <dt class="font-medium">Symbol</dt>
+                  <dd id="reviewSymbol" class="text-slate-700 dark:text-slate-200">–</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="font-medium">Action</dt>
+                  <dd id="reviewAction" class="text-slate-700 dark:text-slate-200">–</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="font-medium">Quantity</dt>
+                  <dd id="reviewQuantity" class="text-slate-700 dark:text-slate-200">–</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="font-medium">Price type</dt>
+                  <dd id="reviewPriceType" class="text-slate-700 dark:text-slate-200">–</dd>
+                </div>
+                <div class="flex justify-between">
+                  <dt class="font-medium">Limit price</dt>
+                  <dd id="reviewLimitPrice" class="text-slate-700 dark:text-slate-200">—</dd>
+                </div>
+              </dl>
+            </div>
+          </section>
+
+          <!-- Status message -->
+          <p id="tradeStatus" class="text-sm mt-1"></p>
+
+          <!-- Step navigation buttons -->
+          <div class="flex justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div class="flex gap-2">
+              <button
+                type="button"
+                id="backBtn"
+                class="px-4 py-2 rounded-xl border border-slate-300 text-sm text-slate-700 dark:text-slate-200 hidden"
               >
-                <option value="market">Market</option>
-                <option value="limit">Limit</option>
-              </select>
+                Back
+              </button>
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                id="cancelBtn"
+                class="px-4 py-2 rounded-xl border border-slate-300 text-sm text-slate-700 dark:text-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                id="nextBtn"
+                class="px-4 py-2 rounded-xl bg-red-700 text-white text-sm font-medium hover:bg-red-800"
+              >
+                Next
+              </button>
+              <button
+                type="button"
+                id="confirmBtn"
+                class="px-4 py-2 rounded-xl bg-red-700 text-white text-sm font-medium hover:bg-red-800 hidden"
+              >
+                Confirm Order
+              </button>
             </div>
           </div>
-          <div id="limitPriceContainer" class="hidden">
-            <label for="limitPrice" class="block text-sm font-medium mb-1">Limit Price ($)</label>
-            <input
-              id="limitPrice"
-              name="limitPrice"
-              type="number"
-              step="0.01"
-              min="0"
-              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
-            />
-          </div>
-          <button
-            type="submit"
-            class="w-full bg-red-700 hover:bg-red-800 text-white py-2 rounded-lg font-medium transition"
-          >
-            Submit Order
-          </button>
-          <p id="tradeStatus" class="text-sm mt-2"></p>
         </form>
 
         <div class="mt-8 border-t border-slate-200 dark:border-slate-800 pt-6">
@@ -108,7 +233,10 @@
       </div>
     </main>
 
-    <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+    <!-- Footer -->
+    <footer
+      class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
+    >
       <p>© <span id="year"></span> Vanguard Mock. For educational use only.</p>
     </footer>
 
@@ -123,7 +251,8 @@
       }
 
       // --- Telemetry setup (behavioral/system-ish events on Trade page) ---
-      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
+      const sessionId =
+        localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
       localStorage.setItem('session_id', sessionId);
       const userId = localStorage.getItem('user_id') || 'U-mock';
       localStorage.setItem('user_id', userId);
@@ -136,7 +265,7 @@
           page,
           event_type,
           timestamp: new Date().toISOString(),
-          metadata
+          metadata,
         };
         console.log('Telemetry:', evt);
       }
@@ -150,17 +279,89 @@
         emit('dwell_time', { ms: dwellMs });
       });
 
-      // Form + inputs
+      // --- Step flow wiring ---
       const tradeForm = document.getElementById('tradeForm');
+      const statusEl = document.getElementById('tradeStatus');
+
+      const step1 = document.getElementById('step1');
+      const step2 = document.getElementById('step2');
+      const step3 = document.getElementById('step3');
+
+      const stepLabel1 = document.getElementById('stepLabel1');
+      const stepLabel2 = document.getElementById('stepLabel2');
+      const stepLabel3 = document.getElementById('stepLabel3');
+
+      const backBtn = document.getElementById('backBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const confirmBtn = document.getElementById('confirmBtn');
+      const cancelBtn = document.getElementById('cancelBtn');
+
       const symbolInput = document.getElementById('symbol');
       const actionSelect = document.getElementById('action');
       const quantityInput = document.getElementById('quantity');
       const priceSelect = document.getElementById('price');
       const limitContainer = document.getElementById('limitPriceContainer');
       const limitPriceInput = document.getElementById('limitPrice');
-      const statusEl = document.getElementById('tradeStatus');
 
-      // Show/hide limit price input and emit toggle
+      const reviewSymbol = document.getElementById('reviewSymbol');
+      const reviewAction = document.getElementById('reviewAction');
+      const reviewQuantity = document.getElementById('reviewQuantity');
+      const reviewPriceType = document.getElementById('reviewPriceType');
+      const reviewLimitPrice = document.getElementById('reviewLimitPrice');
+
+      let currentStep = 1;
+      let formOpened = false;
+
+      function setStepLabelActive(labelEl, active) {
+        if (active) {
+          labelEl.classList.remove('text-slate-400');
+        } else {
+          if (labelEl !== stepLabel1) {
+            labelEl.classList.add('text-slate-400');
+          }
+        }
+      }
+
+      function showStep(step) {
+        currentStep = step;
+        statusEl.textContent = '';
+        statusEl.className = 'text-sm mt-1';
+
+        step1.classList.toggle('hidden', step !== 1);
+        step2.classList.toggle('hidden', step !== 2);
+        step3.classList.toggle('hidden', step !== 3);
+
+        backBtn.classList.toggle('hidden', step === 1);
+        nextBtn.classList.toggle('hidden', step === 3);
+        confirmBtn.classList.toggle('hidden', step !== 3);
+
+        // Update step labels
+        setStepLabelActive(stepLabel1, step >= 1);
+        setStepLabelActive(stepLabel2, step >= 2);
+        setStepLabelActive(stepLabel3, step >= 3);
+
+        emit('trade_step_view', { step });
+      }
+
+      // Start on step 1
+      showStep(1);
+      emit('trade_flow_start');
+
+      // Track when user first meaningfully interacts with the form
+      tradeForm.addEventListener('focusin', () => {
+        if (!formOpened) {
+          formOpened = true;
+          emit('trade_form_open');
+          // potential abandonment
+          setTimeout(() => {
+            if (formOpened && currentStep < 3) {
+              emit('trade_form_abandon', { after_s: 120 });
+            }
+          }, 120000);
+        }
+      });
+
+      // Price type changes
       priceSelect.addEventListener('change', () => {
         const isLimit = priceSelect.value === 'limit';
         limitContainer.classList.toggle('hidden', !isLimit);
@@ -169,8 +370,9 @@
 
       // Simple field change telemetry
       symbolInput.addEventListener('blur', () => {
-        if (symbolInput.value.trim().length > 0) {
-          emit('field_change', { field: 'symbol', length: symbolInput.value.trim().length });
+        const val = symbolInput.value.trim();
+        if (val.length > 0) {
+          emit('field_change', { field: 'symbol', length: val.length });
         }
       });
 
@@ -187,63 +389,135 @@
         }
       });
 
-      // Track when user focuses on the form (for potential abandonment analysis)
-      let formOpened = false;
-      tradeForm.addEventListener('focusin', () => {
-        if (!formOpened) {
-          formOpened = true;
-          emit('trade_form_open');
-          // If no submit after 120s, treat as potential abandonment
-          setTimeout(() => {
-            if (formOpened) {
-              emit('trade_form_abandon', { after_s: 120 });
-            }
-          }, 120000);
+      function validateStep1() {
+        const symbol = symbolInput.value.trim();
+        if (!symbol) {
+          statusEl.textContent = 'Please enter a symbol or fund name.';
+          statusEl.classList.add('text-red-700');
+          emit('trade_step_error', { step: 1, reason: 'missing_symbol' });
+          return false;
+        }
+        return true;
+      }
+
+      function validateStep2() {
+        const missing = [];
+        const action = actionSelect.value;
+        const qty = Number(quantityInput.value);
+        const priceType = priceSelect.value;
+        const limitPrice =
+          priceType === 'limit' ? Number(limitPriceInput.value) : null;
+
+        if (!action) missing.push('action');
+        if (!qty || qty <= 0) missing.push('quantity');
+        if (!priceType) missing.push('price');
+        if (priceType === 'limit' && (!limitPrice || limitPrice <= 0)) {
+          missing.push('limitPrice');
+        }
+
+        if (missing.length > 0) {
+          statusEl.textContent = 'Please fill out all required fields.';
+          statusEl.classList.add('text-red-700');
+          emit('trade_step_error', { step: 2, reason: 'validation', missing_fields: missing });
+          return false;
+        }
+
+        return true;
+      }
+
+      function updateReview() {
+        const symbol = symbolInput.value.trim();
+        const actionText =
+          actionSelect.value === 'buy'
+            ? 'Buy'
+            : actionSelect.value === 'sell'
+            ? 'Sell'
+            : '—';
+        const qty = quantityInput.value || '—';
+        const priceTypeText =
+          priceSelect.value === 'market'
+            ? 'Market'
+            : priceSelect.value === 'limit'
+            ? 'Limit'
+            : '—';
+        const limitVal =
+          priceSelect.value === 'limit' && limitPriceInput.value
+            ? `$${Number(limitPriceInput.value).toFixed(2)}`
+            : '—';
+
+        reviewSymbol.textContent = symbol || '—';
+        reviewAction.textContent = actionText;
+        reviewQuantity.textContent = qty;
+        reviewPriceType.textContent = priceTypeText;
+        reviewLimitPrice.textContent = limitVal;
+      }
+
+      // Next button logic
+      nextBtn.addEventListener('click', () => {
+        if (currentStep === 1) {
+          if (!validateStep1()) return;
+          emit('trade_step_next', { from: 1, to: 2 });
+          showStep(2);
+        } else if (currentStep === 2) {
+          if (!validateStep2()) return;
+          updateReview();
+          emit('trade_step_next', { from: 2, to: 3 });
+          showStep(3);
         }
       });
 
-      // Handle submit with mock success / failure
-      tradeForm.addEventListener('submit', (e) => {
-        e.preventDefault();
+      // Back button logic
+      backBtn.addEventListener('click', () => {
+        if (currentStep === 2) {
+          emit('trade_step_back', { from: 2, to: 1 });
+          showStep(1);
+        } else if (currentStep === 3) {
+          emit('trade_step_back', { from: 3, to: 2 });
+          showStep(2);
+        }
+      });
+
+      // Cancel button logic
+      cancelBtn.addEventListener('click', () => {
+        emit('trade_flow_cancel', { step: currentStep });
+        // For now, just reset the form and go back to step 1
+        tradeForm.reset();
+        limitContainer.classList.add('hidden');
+        showStep(1);
+        formOpened = false;
+      });
+
+      // Confirm (final submit) logic
+      confirmBtn.addEventListener('click', () => {
         statusEl.textContent = '';
-        statusEl.className = 'text-sm mt-2';
+        statusEl.className = 'text-sm mt-1';
+
+        // Re-validate before submit
+        if (!validateStep1() || !validateStep2()) {
+          emit('trade_submit_error', { reason: 'validation_on_confirm' });
+          return;
+        }
 
         const symbol = symbolInput.value.trim();
         const action = actionSelect.value;
         const qty = Number(quantityInput.value);
         const priceType = priceSelect.value;
-        const limitPrice = priceType === 'limit' ? Number(limitPriceInput.value) : null;
+        const limitPrice =
+          priceType === 'limit' ? Number(limitPriceInput.value) : null;
 
-        const missingFields = [];
-        if (!symbol) missingFields.push('symbol');
-        if (!action) missingFields.push('action');
-        if (!qty || qty <= 0) missingFields.push('quantity');
-        if (priceType === 'limit' && (!limitPrice || limitPrice <= 0)) {
-          missingFields.push('limitPrice');
-        }
-
-        if (missingFields.length > 0) {
-          statusEl.textContent = 'Please fill out all required fields.';
-          statusEl.classList.add('text-red-700');
-          emit('trade_submit_error', {
-            reason: 'validation',
-            missing_fields: missingFields
-          });
-          return;
-        }
-
-        // Simulate system-level rejection sometimes to create "frustration"
+        // Simulate system rejection for frustration
         const mockFail = Math.random() < 0.3; // 30% rejection
 
         if (mockFail) {
-          statusEl.textContent = 'Your order could not be submitted. Please review your order details and try again.';
+          statusEl.textContent =
+            'Your order could not be submitted. Please review your order details and try again.';
           statusEl.classList.add('text-red-700');
           emit('trade_submit_error', {
             reason: 'mock_rejection',
             action,
             price_type: priceType,
             quantity: qty,
-            has_limit_price: priceType === 'limit'
+            has_limit_price: priceType === 'limit',
           });
         } else {
           statusEl.textContent = 'Order submitted successfully (mock).';
@@ -252,11 +526,13 @@
             action,
             price_type: priceType,
             quantity: qty,
-            limit_price: priceType === 'limit' ? limitPrice : null
+            limit_price: priceType === 'limit' ? limitPrice : null,
           });
+          emit('trade_flow_complete', { success: true });
           formOpened = false;
           tradeForm.reset();
           limitContainer.classList.add('hidden');
+          showStep(1);
         }
       });
     </script>
