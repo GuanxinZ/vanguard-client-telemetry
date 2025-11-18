@@ -238,6 +238,7 @@
           page,
           event_type,
           timestamp: new Date().toISOString(),
+          from_page: fromPage,
           ...metadata,
         };
         console.log('Telemetry:', evt);
@@ -359,4 +360,5 @@
     </script>
   </body>
 </html>
+
 
