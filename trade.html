@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Trade — Vanguard Mock</title>
-    <meta name="description" content="Trade page for the Vanguard mock investment platform." />
+    <meta
+      name="description"
+      content="Trade page for the Vanguard mock investment platform."
+    />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -53,14 +56,20 @@
             >
             <span>Select investment</span>
           </li>
-          <li id="stepLabel2" class="flex-1 flex items-center gap-2 justify-center text-slate-400">
+          <li
+            id="stepLabel2"
+            class="flex-1 flex items-center gap-2 justify-center text-slate-400"
+          >
             <span
               class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold"
               >2</span
             >
             <span>Order details</span>
           </li>
-          <li id="stepLabel3" class="flex-1 flex items-center gap-2 justify-end text-slate-400">
+          <li
+            id="stepLabel3"
+            class="flex-1 flex items-center gap-2 justify-end text-slate-400"
+          >
             <span
               class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold"
               >3</span
@@ -74,7 +83,9 @@
           <section id="step1">
             <h2 class="text-lg font-semibold mb-4">Step 1: Select investment</h2>
             <div>
-              <label for="symbol" class="block text-sm font-medium mb-1">Symbol or Fund Name</label>
+              <label for="symbol" class="block text-sm font-medium mb-1"
+                >Symbol or Fund Name</label
+              >
               <input
                 id="symbol"
                 name="symbol"
@@ -108,7 +119,9 @@
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label for="quantity" class="block text-sm font-medium mb-1">Quantity</label>
+                  <label for="quantity" class="block text-sm font-medium mb-1"
+                    >Quantity</label
+                  >
                   <input
                     id="quantity"
                     name="quantity"
@@ -119,7 +132,9 @@
                   />
                 </div>
                 <div>
-                  <label for="price" class="block text-sm font-medium mb-1">Price Type</label>
+                  <label for="price" class="block text-sm font-medium mb-1"
+                    >Price Type</label
+                  >
                   <select
                     id="price"
                     name="price"
@@ -132,7 +147,9 @@
                 </div>
               </div>
               <div id="limitPriceContainer" class="hidden">
-                <label for="limitPrice" class="block text-sm font-medium mb-1">Limit Price ($)</label>
+                <label for="limitPrice" class="block text-sm font-medium mb-1"
+                  >Limit Price ($)</label
+                >
                 <input
                   id="limitPrice"
                   name="limitPrice"
@@ -152,8 +169,8 @@
           <section id="step3" class="hidden">
             <h2 class="text-lg font-semibold mb-4">Step 3: Review &amp; confirm</h2>
             <p class="text-sm text-slate-600 dark:text-slate-300 mb-3">
-              Please review your order before submitting. This is a mock flow; no real trades will be
-              placed.
+              Please review your order before submitting. This is a mock flow; no real trades
+              will be placed.
             </p>
             <div
               class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4 text-sm"
@@ -265,12 +282,12 @@
           page,
           event_type,
           timestamp: new Date().toISOString(),
-          metadata,
+          metadata
         };
         console.log('Telemetry:', evt);
       }
 
-      // Page view + dwell time
+      // Page view + dwell time for whole page
       const startTs = performance.now();
       emit('page_view');
 
@@ -309,7 +326,8 @@
       const reviewPriceType = document.getElementById('reviewPriceType');
       const reviewLimitPrice = document.getElementById('reviewLimitPrice');
 
-      let currentStep = 1;
+      let currentStep = null;
+      let stepStartTs = performance.now();
       let formOpened = false;
 
       function setStepLabelActive(labelEl, active) {
@@ -323,7 +341,18 @@
       }
 
       function showStep(step) {
+        // Per-step dwell: emit how long the last step was visible
+        if (currentStep !== null) {
+          const dwellMs = Math.round(performance.now() - stepStartTs);
+          emit('trade_step_dwell', {
+            step: currentStep,
+            ms: dwellMs
+          });
+        }
+
         currentStep = step;
+        stepStartTs = performance.now();
+
         statusEl.textContent = '';
         statusEl.className = 'text-sm mt-1';
 
@@ -418,7 +447,11 @@
         if (missing.length > 0) {
           statusEl.textContent = 'Please fill out all required fields.';
           statusEl.classList.add('text-red-700');
-          emit('trade_step_error', { step: 2, reason: 'validation', missing_fields: missing });
+          emit('trade_step_error', {
+            step: 2,
+            reason: 'validation',
+            missing_fields: missing
+          });
           return false;
         }
 
@@ -505,19 +538,26 @@
         const limitPrice =
           priceType === 'limit' ? Number(limitPriceInput.value) : null;
 
-        // Simulate system rejection for frustration
-        const mockFail = Math.random() < 0.3; // 30% rejection
+        // Controlled failure: quantity > 100 triggers deterministic failure
+        const forcedFail = qty > 100;
+
+        // Additional random rejection to simulate occasional backend issues
+        const randomFail = Math.random() < 0.3;
+        const mockFail = forcedFail || randomFail;
 
         if (mockFail) {
           statusEl.textContent =
             'Your order could not be submitted. Please review your order details and try again.';
           statusEl.classList.add('text-red-700');
           emit('trade_submit_error', {
-            reason: 'mock_rejection',
+            reason: forcedFail
+              ? 'controlled_failure_qty_gt_100'
+              : 'mock_rejection',
             action,
             price_type: priceType,
             quantity: qty,
             has_limit_price: priceType === 'limit',
+            forced_failure: forcedFail
           });
         } else {
           statusEl.textContent = 'Order submitted successfully (mock).';
@@ -526,7 +566,7 @@
             action,
             price_type: priceType,
             quantity: qty,
-            limit_price: priceType === 'limit' ? limitPrice : null,
+            limit_price: priceType === 'limit' ? limitPrice : null
           });
           emit('trade_flow_complete', { success: true });
           formOpened = false;
