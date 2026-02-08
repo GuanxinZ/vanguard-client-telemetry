@@ -139,6 +139,7 @@
 
       // --- Telemetry (Behavioral) ---
       Telemetry.init('holdings');
+      Telemetry.attachBehavioralCapture();
       const startTs = performance.now();
       Telemetry.emit('page_view');
 
@@ -158,17 +159,33 @@
       const statementsStatus = document.getElementById('statementsStatus');
 
       if (statementsBtn) {
+        let statementsAttemptCount = 0;
         statementsBtn.addEventListener('click', () => {
           Telemetry.emit('statements_click');
-          const fail = Math.random() < 0.6;
-          if (fail) {
+          statementsAttemptCount += 1;
+          const roll = Math.random();
+          const isTimeout = roll < 0.15;
+          const isUnavailable = roll >= 0.15 && roll < 0.75;
+          if (isTimeout) {
+            statementsStatus.textContent = 'Request timed out. Please try again.';
+            statementsStatus.className = 'mt-2 text-xs text-red-700';
+            Telemetry.emit('statements_error', { reason: 'timeout' });
+            Telemetry.emitTimeout('statements_download', { attempt: statementsAttemptCount });
+            if (statementsAttemptCount > 1) {
+              Telemetry.emitRetry('statements_download', statementsAttemptCount, { reason: 'timeout' });
+            }
+          } else if (isUnavailable) {
             statementsStatus.textContent = 'We could not retrieve your statement. Please try again later.';
             statementsStatus.className = 'mt-2 text-xs text-red-700';
             Telemetry.emit('statements_error', { reason: 'mock_unavailable' });
+            if (statementsAttemptCount > 1) {
+              Telemetry.emitRetry('statements_download', statementsAttemptCount, { reason: 'mock_unavailable' });
+            }
           } else {
             statementsStatus.textContent = 'Your statement download has started (mock).';
             statementsStatus.className = 'mt-2 text-xs text-green-700';
             Telemetry.emit('statements_success');
+            statementsAttemptCount = 0;
           }
         });
       }

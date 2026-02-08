@@ -116,6 +116,7 @@
 
       // --- Telemetry + mock account creation ---
       Telemetry.init('create_account');
+      Telemetry.attachBehavioralCapture();
       const startTs = performance.now();
       Telemetry.emit('page_view');
 
@@ -127,6 +128,7 @@
       const form = document.getElementById('createAccountForm');
       const formStatus = document.getElementById('formStatus');
       let formOpened = false;
+      let createAttemptCount = 0;
 
       form.addEventListener('focusin', (e) => {
         if (!formOpened) {
@@ -146,6 +148,7 @@
 
       form.addEventListener('submit', (e) => {
         e.preventDefault();
+        createAttemptCount += 1;
 
         const fullname = document.getElementById('fullname').value.trim();
         const email = document.getElementById('email').value.trim();
@@ -156,6 +159,9 @@
         // Basic client-side validation to simulate friction
         if (!fullname || !email || !pwd || !cpwd || !termsChecked) {
           Telemetry.emit('create_submit_error', { reason: 'missing_fields' });
+          if (createAttemptCount > 1) {
+            Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'missing_fields' });
+          }
           formStatus.textContent = 'Please fill in all fields and accept the terms.';
           formStatus.className = 'text-sm text-red-700';
           return;
@@ -163,6 +169,9 @@
 
         if (pwd !== cpwd) {
           Telemetry.emit('create_submit_error', { reason: 'password_mismatch' });
+          if (createAttemptCount > 1) {
+            Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'password_mismatch' });
+          }
           formStatus.textContent = 'Passwords do not match.';
           formStatus.className = 'text-sm text-red-700';
           return;
@@ -172,6 +181,9 @@
         const fail = Math.random() < 0.25; // 25% chance
         if (fail) {
           Telemetry.emit('create_submit_error', { reason: 'mock_backend_failure' });
+          if (createAttemptCount > 1) {
+            Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'mock_backend_failure' });
+          }
           formStatus.textContent = 'Account creation failed. Please try again.';
           formStatus.className = 'text-sm text-red-700';
           return;
@@ -190,6 +202,7 @@
         formStatus.className = 'text-sm text-green-700';
 
         formOpened = false;
+        createAttemptCount = 0;
 
         setTimeout(() => {
           window.location.href = './login.html';

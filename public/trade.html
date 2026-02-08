@@ -270,6 +270,7 @@
 
       // --- Telemetry (behavioral/system events on Trade page) ---
       Telemetry.init('trade');
+      Telemetry.attachBehavioralCapture();
       const startTs = performance.now();
       Telemetry.emit('page_view');
 
@@ -503,13 +504,18 @@
       });
 
       // Confirm (final submit) logic
+      let tradeSubmitAttemptCount = 0;
       confirmBtn.addEventListener('click', () => {
         statusEl.textContent = '';
         statusEl.className = 'text-sm mt-1';
+        tradeSubmitAttemptCount += 1;
 
         // Re-validate before submit
         if (!validateStep1() || !validateStep2()) {
           Telemetry.emit('trade_submit_error', { reason: 'validation_on_confirm' });
+          if (tradeSubmitAttemptCount > 1) {
+            Telemetry.emitRetry('trade_submit', tradeSubmitAttemptCount, { reason: 'validation_on_confirm' });
+          }
           return;
         }
 
@@ -541,6 +547,11 @@
             has_limit_price: priceType === 'limit',
             forced_failure: forcedFail
           });
+          if (tradeSubmitAttemptCount > 1) {
+            Telemetry.emitRetry('trade_submit', tradeSubmitAttemptCount, {
+              reason: forcedFail ? 'controlled_failure_qty_gt_100' : 'mock_rejection'
+            });
+          }
         } else {
           statusEl.textContent = 'Order submitted successfully (mock).';
           statusEl.classList.add('text-green-700');
@@ -552,6 +563,7 @@
           });
           Telemetry.emit('trade_flow_complete', { success: true });
           formOpened = false;
+          tradeSubmitAttemptCount = 0;
           tradeForm.reset();
           limitContainer.classList.add('hidden');
           showStep(1);

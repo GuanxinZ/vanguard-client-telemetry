@@ -115,6 +115,7 @@
 
       // --- Telemetry: behavioral metrics on home page ---
       Telemetry.init('home');
+      Telemetry.attachBehavioralCapture();
       const startTs = performance.now();
       Telemetry.emit('page_view');
 

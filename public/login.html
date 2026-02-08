@@ -92,6 +92,7 @@
          Telemetry Setup
       -------------------------- */
       Telemetry.init('login');
+      Telemetry.attachBehavioralCapture();
       const startTs = performance.now();
       Telemetry.emit('page_view');
 
@@ -120,9 +121,11 @@
       -------------------------- */
       const loginForm = document.getElementById("loginForm");
       const loginError = document.getElementById("loginError");
+      let loginAttemptCount = 0;
 
       loginForm.addEventListener("submit", (e) => {
         e.preventDefault();
+        loginAttemptCount += 1;
 
         const username = document.getElementById("username").value.trim();
         const pw = document.getElementById("password").value.trim();
@@ -134,6 +137,9 @@
           loginError.textContent = "System error. Try again."
           loginError.classList.remove("hidden");
           Telemetry.emit('login_error', { reason: 'system_failure' });
+          if (loginAttemptCount > 1) {
+            Telemetry.emitRetry('login', loginAttemptCount, { reason: 'system_failure' });
+          }
           return;
         }
 
@@ -142,6 +148,9 @@
           loginError.textContent = "Invalid username or password.";
           loginError.classList.remove("hidden");
           Telemetry.emit('login_error', { reason: 'invalid_credentials' });
+          if (loginAttemptCount > 1) {
+            Telemetry.emitRetry('login', loginAttemptCount, { reason: 'invalid_credentials' });
+          }
           return;
         }
 

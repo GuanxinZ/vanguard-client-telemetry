@@ -222,6 +222,7 @@
       const params = new URLSearchParams(window.location.search);
       const fromPage = params.get('from') || 'unknown';
       Telemetry.init('help', { from_page: fromPage });
+      Telemetry.attachBehavioralCapture();
 
       const startTs = performance.now();
       Telemetry.emit('page_view', { source: 'help_page' });
@@ -295,8 +296,10 @@
         }
       });
 
+      let contactAttemptCount = 0;
       contactForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        contactAttemptCount += 1;
         const formData = new FormData(contactForm);
         const category = formData.get('category') || 'unknown';
 
@@ -309,6 +312,9 @@
             category,
             frustration_signal: true,
           });
+          if (contactAttemptCount > 1) {
+            Telemetry.emitRetry('contact_submit', contactAttemptCount, { source: 'help_page', category });
+          }
         } else {
           contactStatus.textContent = 'Thanks! We received your message.';
           contactStatus.className = 'text-sm text-green-700';
@@ -317,6 +323,7 @@
             category,
           });
           contactOpened = false;
+          contactAttemptCount = 0;
           contactForm.reset();
         }
       });

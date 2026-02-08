@@ -88,6 +88,7 @@
 
       // --- Telemetry for account home page ---
       Telemetry.init('account_home');
+      Telemetry.attachBehavioralCapture();
       const startTs = performance.now();
       Telemetry.emit('page_view');
 

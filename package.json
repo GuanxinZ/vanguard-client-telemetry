@@ -17,9 +17,9 @@
     "url": "https://github.com/GuanxinZ/vanguard-client-telemetry/issues"
   },
   "homepage": "https://github.com/GuanxinZ/vanguard-client-telemetry#readme",
-  "description": "",
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1"
-  }
+  },
+  "description": ""
 }
