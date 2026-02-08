@@ -1,0 +1,28 @@
+{
+  "name": "playwright-user-behavior-simulator",
+  "version": "1.0.0",
+  "description": "Playwright demo for simulating user behaviors and telemetry collection",
+  "main": "run.js",
+  "type": "module",
+  "scripts": {
+    "test": "node run.js",
+    "install-browsers": "npx playwright install"
+  },
+  "keywords": [
+    "playwright",
+    "automation",
+    "telemetry",
+    "user-behavior"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@playwright/test": "^1.40.0",
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}
+
