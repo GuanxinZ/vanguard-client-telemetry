@@ -24,14 +24,15 @@ Every event includes:
 
 | Field | Type | Description |
 |-------|------|--------------|
-| `session_id` | string | Unique session identifier |
-| `user_id` | string | User identifier (U-guest or U{n}) |
-| `page` | string | Page context (home, login, trade, etc.) |
-| `event_type` | string | Event name (see below) |
+| `sessionId` | string | Unique session identifier |
+| `userId` | string | User identifier (U-guest or U{n}) |
+| `pageRoute` | string | Page context (home, login, trade, etc.) |
+| `eventType` | string | Event name (see below) |
 | `timestamp` | ISO 8601 | Client timestamp |
 | `url` | string | Full page URL |
+| `elementId` | string | Element identifier (extracted from metadata.id) |
 | `metadata` | object | Event-specific data |
-| `server_received_at` | ISO 8601 | Server timestamp (added on ingest) |
+| `serverReceivedAt` | ISO 8601 | Server timestamp (added on ingest) |
 
 ---
 
@@ -148,8 +149,8 @@ Every event includes:
 
 ## Page Context Values
 
-| `page` value | File |
-|--------------|------|
+| `pageRoute` value | File |
+|-------------------|------|
 | `home` | index.html |
 | `login` | login.html |
 | `create_account` | create-account.html |

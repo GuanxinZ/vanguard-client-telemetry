@@ -1,48 +1,59 @@
 /**
- * Shared telemetry for Vanguard Client Telemetry (Phase 1).
+ * Vanguard Client Telemetry (Phase 1)
  * Captures behavioral, system, and sentiment-adjacent events per SDD requirements.
- * Sends events to the Node.js ingestion server via HTTP POST.
- *
- * SDD Phase 1 Required Metrics (for Feature Extraction §6.1.1):
- * - Click counts and retry attempts
- * - Error and timeout occurrences
- * - Average dwell time and idle time
- * - Navigation backtracking and refocus behavior
- * - Form abandonment indicators
  */
 const Telemetry = {
-  page: null,
+  pageRoute: null,
   baseContext: {},
   _behavioralAttached: false,
+  _formInteracted: false,
+  _formSubmitted: false,
+  _pageStartTime: null,
 
+  /**
+   * Initialize telemetry for a page.
+   * @param {string} pageName - Route identifier (e.g., 'trade', 'login')
+   * @param {object} options - Additional context to attach to all events
+   */
   init(pageName, options = {}) {
-    this.page = pageName;
+    this.pageRoute = pageName;
     this.baseContext = options;
+    this._pageStartTime = performance.now();
 
-    if (!localStorage.getItem('session_id')) {
-      localStorage.setItem('session_id', `S${Math.floor(Math.random() * 100000)}`);
+    if (!localStorage.getItem('sessionId')) {
+      localStorage.setItem('sessionId', `S${Date.now()}-${Math.floor(Math.random() * 10000)}`);
     }
-    if (!localStorage.getItem('user_id')) {
-      localStorage.setItem('user_id', 'U-guest');
+    if (!localStorage.getItem('userId')) {
+      localStorage.setItem('userId', 'U-guest');
     }
+
+    this.attachBehavioralCapture();
+    this.emit('page_view');
   },
 
-  _buildEvent(event_type, metadata = {}) {
+  _buildEvent(eventType, metadata = {}) {
+    const { id, ...restMetadata } = metadata;
     return {
-      session_id: localStorage.getItem('session_id'),
-      user_id: localStorage.getItem('user_id') || 'U-guest',
-      page: this.page,
-      event_type,
+      sessionId: localStorage.getItem('sessionId'),
+      userId: localStorage.getItem('userId') || 'U-guest',
+      pageRoute: this.pageRoute,
+      eventType,
       timestamp: new Date().toISOString(),
       url: window.location.href,
+      ...(id && { elementId: id }),
       ...this.baseContext,
-      metadata,
+      metadata: restMetadata,
     };
   },
 
-  emit(event_type, metadata = {}) {
-    const evt = this._buildEvent(event_type, metadata);
-    console.log('Telemetry:', evt);
+  /**
+   * Emit a telemetry event.
+   * @param {string} eventType - Event name
+   * @param {object} metadata - Event-specific data
+   */
+  emit(eventType, metadata = {}) {
+    const evt = this._buildEvent(eventType, metadata);
+    console.log('📊 Telemetry:', eventType, metadata);
 
     fetch('/api/telemetry', {
       method: 'POST',
@@ -51,67 +62,89 @@ const Telemetry = {
     }).catch(() => {});
   },
 
-  /** Use for beforeunload; fetch may be cancelled on page unload. */
-  sendBeacon(event_type, metadata = {}) {
-    const evt = this._buildEvent(event_type, metadata);
-    console.log('Telemetry:', evt);
-
+  sendBeacon(eventType, metadata = {}) {
+    const evt = this._buildEvent(eventType, metadata);
     const blob = new Blob([JSON.stringify(evt)], { type: 'application/json' });
     if (navigator.sendBeacon) {
       navigator.sendBeacon('/api/telemetry', blob);
     } else {
-      this.emit(event_type, metadata);
+      this.emit(eventType, metadata);
     }
   },
 
-  /**
-   * Emit timeout event (system-level signal for frustration scoring).
-   * Call when an operation exceeds expected duration (e.g., mock API timeout).
-   */
   emitTimeout(operation, metadata = {}) {
     this.emit('timeout', { operation, ...metadata });
   },
 
-  /**
-   * Track retry attempts. Call when user retries a failed action.
-   * Increments retry count for session-level aggregation.
-   */
   emitRetry(action, attemptNumber, metadata = {}) {
-    this.emit('retry_attempt', { action, attempt_number: attemptNumber, ...metadata });
+    this.emit('retry_attempt', { action, attemptNumber, ...metadata });
   },
 
   /**
    * Attach global behavioral capture for SDD-required metrics.
-   * Call after Telemetry.init() on each page.
-   * Captures: clicks, scroll depth, idle time, refocus behavior.
+   * Captures: rage clicks, scroll depth, idle time, refocus, errors, form abandonment.
    */
   attachBehavioralCapture() {
     if (this._behavioralAttached) return;
     this._behavioralAttached = true;
 
-    // --- Click counts (for feature extraction) ---
-    let lastClickTs = 0;
-    const CLICK_THROTTLE_MS = 300;
+    const clickHistory = new Map();
+    const RAGE_CLICK_THRESHOLD = 3;
+    const RAGE_CLICK_WINDOW_MS = 800;
+
     document.addEventListener(
       'click',
       (e) => {
-        if (performance.now() - lastClickTs < CLICK_THROTTLE_MS) return;
-        lastClickTs = performance.now();
         const target = e.target;
-        const tag = target.tagName?.toLowerCase();
-        const id = target.id || target.name || '';
-        const role = target.getAttribute?.('role') || '';
+        const elementKey = this._getElementKey(target);
+        const now = performance.now();
+
+        if (!clickHistory.has(elementKey)) {
+          clickHistory.set(elementKey, []);
+        }
+        const timestamps = clickHistory.get(elementKey);
+        const recentClicks = timestamps.filter(t => now - t < RAGE_CLICK_WINDOW_MS);
+        recentClicks.push(now);
+        clickHistory.set(elementKey, recentClicks);
+
+        if (recentClicks.length >= RAGE_CLICK_THRESHOLD) {
+          this.emit('rage_click', {
+            element: elementKey,
+            clickCount: recentClicks.length,
+            tag: target.tagName?.toLowerCase(),
+            id: target.id || undefined,
+            text: (target.textContent || '').trim().slice(0, 50),
+          });
+          clickHistory.set(elementKey, []);
+        }
+
         this.emit('click', {
-          tag,
-          id: id || undefined,
-          role: role || undefined,
-          text_len: (target.textContent || '').trim().slice(0, 50).length,
+          tag: target.tagName?.toLowerCase(),
+          id: target.id || target.name || undefined,
+          role: target.getAttribute?.('role') || undefined,
+          textLen: (target.textContent || '').trim().slice(0, 50).length,
         });
       },
       true
     );
 
-    // --- Scroll depth (hesitation / engagement signal) ---
+    window.addEventListener('error', (event) => {
+      this.emit('system_error', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        errorType: 'js_error',
+      });
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      this.emit('system_error', {
+        message: event.reason?.message || String(event.reason),
+        errorType: 'unhandled_promise_rejection',
+      });
+    });
+
     const SCROLL_MILESTONES = [0.25, 0.5, 0.75, 1];
     const reachedMilestones = new Set();
     const onScroll = () => {
@@ -123,13 +156,12 @@ const Telemetry = {
       for (const m of SCROLL_MILESTONES) {
         if (pct >= m && !reachedMilestones.has(m)) {
           reachedMilestones.add(m);
-          this.emit('scroll_depth', { pct: m, scroll_y: Math.round(scrollTop) });
+          this.emit('scroll_depth', { pct: m, scrollY: Math.round(scrollTop) });
         }
       }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // --- Idle time (hesitation / confusion signal) ---
     const IDLE_THRESHOLD_MS = 30000;
     let idleTimer = null;
     let lastActivityTs = performance.now();
@@ -149,7 +181,6 @@ const Telemetry = {
     window.addEventListener('scroll', resetIdleTimer, { passive: true });
     resetIdleTimer();
 
-    // --- Refocus behavior (backtracking / confusion signal) ---
     let lastFocusedId = null;
     let lastBlurTs = 0;
     const REFOCUS_WINDOW_MS = 5000;
@@ -161,7 +192,7 @@ const Telemetry = {
         if (!id) return;
         const now = performance.now();
         if (lastFocusedId === id && now - lastBlurTs < REFOCUS_WINDOW_MS) {
-          this.emit('refocus', { field: id, ms_since_blur: Math.round(now - lastBlurTs) });
+          this.emit('refocus', { field: id, msSinceBlur: Math.round(now - lastBlurTs) });
         }
         lastFocusedId = id;
       },
@@ -179,9 +210,39 @@ const Telemetry = {
       true
     );
 
-    // --- Navigation backtracking (browser back/forward) ---
     window.addEventListener('popstate', () => {
       this.emit('nav_backtrack', { direction: 'back' });
     });
+
+    document.addEventListener('focusin', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        this._formInteracted = true;
+      }
+    }, true);
+
+    document.addEventListener('submit', () => {
+      this._formSubmitted = true;
+    }, true);
+
+    window.addEventListener('beforeunload', () => {
+      const dwellMs = Math.round(performance.now() - this._pageStartTime);
+      
+      this.sendBeacon('page_view_end', { dwellMs });
+
+      if (this._formInteracted && !this._formSubmitted) {
+        this.sendBeacon('form_abandonment', {
+          pageRoute: this.pageRoute,
+          dwellMs,
+        });
+      }
+    });
+  },
+
+  _getElementKey(element) {
+    if (element.id) return `#${element.id}`;
+    if (element.name) return `[name="${element.name}"]`;
+    const tag = element.tagName?.toLowerCase() || 'unknown';
+    const classList = Array.from(element.classList || []).slice(0, 2).join('.');
+    return classList ? `${tag}.${classList}` : tag;
   },
 };
