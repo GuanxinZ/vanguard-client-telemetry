@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Help — Vanguard Mock</title>
+    <meta name="description" content="Help & Support for the Vanguard mock investment platform." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+    <!-- Header -->
+    <header
+      class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 backdrop-blur"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <a href="./index.html" class="flex items-center gap-2">
+          <span
+            class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-700 text-white font-bold"
+            >V</span
+          >
+          <span class="font-semibold text-lg tracking-tight">Vanguard Mock</span>
+        </a>
+        <nav class="flex items-center gap-6 text-sm">
+          <a class="hover:text-red-700" href="./index.html">Home</a>
+          <a class="hover:text-red-700" href="./holdings.html">Holdings</a>
+          <a class="hover:text-red-700" href="./trade.html">Trade</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10" id="main">
+      <!-- Breadcrumb -->
+      <nav aria-label="Breadcrumb" class="text-sm text-slate-500 mb-6">
+        <ol class="flex items-center gap-2">
+          <li><a href="./index.html" class="hover:underline">Home</a></li>
+          <li class="text-slate-400">/</li>
+          <li aria-current="page" class="text-slate-600">Help</li>
+        </ol>
+      </nav>
+
+      <h1 class="text-3xl font-semibold mb-6">Help & Support</h1>
+
+      <!-- Search -->
+      <section class="mb-10">
+        <form id="helpSearchForm" class="flex gap-3" role="search">
+          <label for="helpSearch" class="sr-only">Search help</label>
+          <input
+            id="helpSearch"
+            name="q"
+            type="search"
+            placeholder="Search help (e.g., reset password)"
+            class="w-full rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
+          />
+          <button class="px-5 py-2 rounded-xl bg-red-700 text-white hover:bg-red-800">Search</button>
+        </form>
+      </section>
+
+      <!-- Top FAQs -->
+      <section aria-labelledby="faqs-title" class="mb-12">
+        <h2 id="faqs-title" class="text-xl font-semibold mb-4">Top FAQs</h2>
+
+        <div class="space-y-3" id="faqList">
+          <!-- FAQ Item -->
+          <details
+            class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4"
+            data-faq-id="faq-1"
+          >
+            <summary class="cursor-pointer font-medium">How do I reset my password?</summary>
+            <div class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+              Go to <em>Login → Forgot password</em> and follow the steps. Check your spam folder if you
+              don't see the email.
+              <div class="mt-3">
+                <button class="text-red-700 hover:underline text-sm" data-action="faq-solved">
+                  This solved my issue
+                </button>
+              </div>
+            </div>
+          </details>
+
+          <details
+            class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4"
+            data-faq-id="faq-2"
+          >
+            <summary class="cursor-pointer font-medium">Why was my trade rejected?</summary>
+            <div class="mt-3 text-sm">
+              Common reasons: insufficient funds, price moved past your limit, or market hours
+              restrictions.
+              <div class="mt-3">
+                <button class="text-red-700 hover:underline text-sm" data-action="faq-solved">
+                  This solved my issue
+                </button>
+              </div>
+            </div>
+          </details>
+
+          <details
+            class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4"
+            data-faq-id="faq-3"
+          >
+            <summary class="cursor-pointer font-medium">How do I view my statements?</summary>
+            <div class="mt-3 text-sm">
+              Navigate to <em>Holdings → Statements</em> and select a month.
+              <div class="mt-3">
+                <button class="text-red-700 hover:underline text-sm" data-action="faq-solved">
+                  This solved my issue
+                </button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- Contact form -->
+      <section aria-labelledby="contact-title" class="mb-12">
+        <h2 id="contact-title" class="text-xl font-semibold mb-4">Still need help? Contact us</h2>
+        <form
+          id="contactForm"
+          class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 space-y-4"
+          novalidate
+        >
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label for="cname" class="block text-sm font-medium mb-1">Full Name</label>
+              <input
+                id="cname"
+                name="name"
+                type="text"
+                required
+                class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label for="cemail" class="block text-sm font-medium mb-1">Email</label>
+              <input
+                id="cemail"
+                name="email"
+                type="email"
+                required
+                class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2"
+              />
+            </div>
+          </div>
+          <div>
+            <label for="ccat" class="block text-sm font-medium mb-1">Issue Category</label>
+            <select
+              id="ccat"
+              name="category"
+              required
+              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2"
+            >
+              <option value="">Select a category</option>
+              <option value="login">Login/Account</option>
+              <option value="trading">Trading</option>
+              <option value="statements">Statements</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label for="cdesc" class="block text-sm font-medium mb-1">Describe your issue</label>
+            <textarea
+              id="cdesc"
+              name="description"
+              rows="4"
+              required
+              class="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2"
+            ></textarea>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="submit" class="px-5 py-2 rounded-xl bg-red-700 text-white hover:bg-red-800">
+              Submit
+            </button>
+            <span id="contactStatus" class="text-sm"></span>
+          </div>
+        </form>
+      </section>
+
+      <!-- Escalation options -->
+      <section aria-labelledby="escalation-title" class="mb-8">
+        <h2 id="escalation-title" class="text-xl font-semibold mb-3">Prefer another way?</h2>
+        <div class="flex flex-wrap gap-3 text-sm">
+          <a
+            href="#"
+            class="px-4 py-2 rounded-xl border border-slate-300 hover:border-red-700"
+            data-escalation="chat"
+            >Start Chat (mock)</a
+          >
+          <a
+            href="#"
+            class="px-4 py-2 rounded-xl border border-slate-300 hover:border-red-700"
+            data-escalation="call"
+            >Call Support (mock)</a
+          >
+          <a
+            href="#"
+            class="px-4 py-2 rounded-xl border border-slate-300 hover:border-red-700"
+            data-escalation="secure"
+            data-escalation-type="secure_message"
+            >Send Secure Message (mock)</a
+          >
+        </div>
+      </section>
+    </main>
+
+    <footer
+      class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-sm text-slate-500 dark:text-slate-400"
+    >
+      <p>© <span id="year"></span> Vanguard Mock. For educational use only.</p>
+    </footer>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      // --- Minimal telemetry helpers (emit to console for now) ---
+      const sessionId =
+        localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
+      localStorage.setItem('session_id', sessionId);
+
+      const userId = localStorage.getItem('user_id') || 'U-mock';
+      localStorage.setItem('user_id', userId);
+
+      const page = 'help';
+
+      // Read ?from=... to know which page sent the user here
+      const params = new URLSearchParams(window.location.search);
+      const fromPage = params.get('from') || 'unknown';
+
+      function emit(event_type, metadata = {}) {
+        const evt = {
+          session_id: sessionId,
+          user_id: userId,
+          page,
+          event_type,
+          timestamp: new Date().toISOString(),
+          from_page: fromPage,
+          ...metadata,
+        };
+        console.log('Telemetry:', evt);
+      }
+
+      // page view + dwell time
+      const startTs = performance.now();
+      emit('page_view', { source: 'help_page' });
+
+      window.addEventListener('beforeunload', () => {
+        const dwellMs = Math.round(performance.now() - startTs);
+        emit('dwell_time', {
+          source: 'help_page',
+          ms: dwellMs,
+        });
+      });
+
+      // search
+      const helpSearchForm = document.getElementById('helpSearchForm');
+      helpSearchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const q = (new FormData(helpSearchForm).get('q') || '').trim();
+        emit('help_search', {
+          source: 'help_page',
+          q_len: q.length,
+          has_terms: q.length > 0,
+        });
+        alert('Mock search submitted.');
+      });
+
+      // faq open/close & solved
+      document.getElementById('faqList').addEventListener(
+        'toggle',
+        (e) => {
+          if (e.target.tagName.toLowerCase() === 'details') {
+            const id = e.target.dataset.faqId;
+            emit(e.target.open ? 'faq_open' : 'faq_close', {
+              source: 'help_page',
+              faq_id: id,
+            });
+          }
+        },
+        true
+      );
+
+      document.getElementById('faqList').addEventListener('click', (e) => {
+        if (e.target.dataset.action === 'faq-solved') {
+          const wrapper = e.target.closest('details');
+          emit('faq_solved', {
+            source: 'help_page',
+            faq_id: wrapper?.dataset.faqId,
+          });
+          e.preventDefault();
+        }
+      });
+
+      // contact: open (first focus), submit with random failure
+      const contactForm = document.getElementById('contactForm');
+      const contactStatus = document.getElementById('contactStatus');
+      let contactOpened = false;
+
+      contactForm.addEventListener('focusin', () => {
+        if (!contactOpened) {
+          contactOpened = true;
+          emit('contact_open', { source: 'help_page' });
+
+          // abandon timer (e.g., no submit within 90s)
+          setTimeout(() => {
+            if (contactOpened) {
+              emit('abandon_contact_form', {
+                source: 'help_page',
+                after_s: 90,
+                frustration_signal: true,
+              });
+            }
+          }, 90000);
+        }
+      });
+
+      contactForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(contactForm);
+        const category = formData.get('category') || 'unknown';
+
+        const fail = Math.random() < 0.25; // 25% failure to simulate frustration
+        if (fail) {
+          contactStatus.textContent = 'Submission failed. Please try again.';
+          contactStatus.className = 'text-sm text-red-700';
+          emit('contact_submit_error', {
+            source: 'help_page',
+            category,
+            frustration_signal: true,
+          });
+        } else {
+          contactStatus.textContent = 'Thanks! We received your message.';
+          contactStatus.className = 'text-sm text-green-700';
+          emit('contact_submit_success', {
+            source: 'help_page',
+            category,
+          });
+          contactOpened = false;
+          contactForm.reset();
+        }
+      });
+
+      // escalation clicks (chat / call / secure msg)
+      document.querySelectorAll('[data-escalation]').forEach((a) => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          emit('escalation_click', {
+            source: 'help_page',
+            channel: a.dataset.escalation,
+            escalation_type: a.dataset.escalationType || 'standard',
+            frustration_signal: true,
+          });
+          alert('Mock escalation triggered.');
+        });
+      });
+    </script>
+  </body>
+</html>
+
+
