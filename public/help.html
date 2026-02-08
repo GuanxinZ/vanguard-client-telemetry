@@ -13,6 +13,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <!-- Header -->
@@ -217,40 +218,17 @@
     <script>
       document.getElementById('year').textContent = new Date().getFullYear();
 
-      // --- Minimal telemetry helpers (emit to console for now) ---
-      const sessionId =
-        localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-
-      const userId = localStorage.getItem('user_id') || 'U-mock';
-      localStorage.setItem('user_id', userId);
-
-      const page = 'help';
-
-      // Read ?from=... to know which page sent the user here
+      // --- Telemetry (help page) ---
       const params = new URLSearchParams(window.location.search);
       const fromPage = params.get('from') || 'unknown';
+      Telemetry.init('help', { from_page: fromPage });
 
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: userId,
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          from_page: fromPage,
-          ...metadata,
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // page view + dwell time
       const startTs = performance.now();
-      emit('page_view', { source: 'help_page' });
+      Telemetry.emit('page_view', { source: 'help_page' });
 
       window.addEventListener('beforeunload', () => {
         const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', {
+        Telemetry.sendBeacon('dwell_time', {
           source: 'help_page',
           ms: dwellMs,
         });
@@ -261,7 +239,7 @@
       helpSearchForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const q = (new FormData(helpSearchForm).get('q') || '').trim();
-        emit('help_search', {
+        Telemetry.emit('help_search', {
           source: 'help_page',
           q_len: q.length,
           has_terms: q.length > 0,
@@ -275,7 +253,7 @@
         (e) => {
           if (e.target.tagName.toLowerCase() === 'details') {
             const id = e.target.dataset.faqId;
-            emit(e.target.open ? 'faq_open' : 'faq_close', {
+            Telemetry.emit(e.target.open ? 'faq_open' : 'faq_close', {
               source: 'help_page',
               faq_id: id,
             });
@@ -287,7 +265,7 @@
       document.getElementById('faqList').addEventListener('click', (e) => {
         if (e.target.dataset.action === 'faq-solved') {
           const wrapper = e.target.closest('details');
-          emit('faq_solved', {
+          Telemetry.emit('faq_solved', {
             source: 'help_page',
             faq_id: wrapper?.dataset.faqId,
           });
@@ -303,12 +281,11 @@
       contactForm.addEventListener('focusin', () => {
         if (!contactOpened) {
           contactOpened = true;
-          emit('contact_open', { source: 'help_page' });
+          Telemetry.emit('contact_open', { source: 'help_page' });
 
-          // abandon timer (e.g., no submit within 90s)
           setTimeout(() => {
             if (contactOpened) {
-              emit('abandon_contact_form', {
+              Telemetry.emit('abandon_contact_form', {
                 source: 'help_page',
                 after_s: 90,
                 frustration_signal: true,
@@ -327,7 +304,7 @@
         if (fail) {
           contactStatus.textContent = 'Submission failed. Please try again.';
           contactStatus.className = 'text-sm text-red-700';
-          emit('contact_submit_error', {
+          Telemetry.emit('contact_submit_error', {
             source: 'help_page',
             category,
             frustration_signal: true,
@@ -335,7 +312,7 @@
         } else {
           contactStatus.textContent = 'Thanks! We received your message.';
           contactStatus.className = 'text-sm text-green-700';
-          emit('contact_submit_success', {
+          Telemetry.emit('contact_submit_success', {
             source: 'help_page',
             category,
           });
@@ -348,7 +325,7 @@
       document.querySelectorAll('[data-escalation]').forEach((a) => {
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          emit('escalation_click', {
+          Telemetry.emit('escalation_click', {
             source: 'help_page',
             channel: a.dataset.escalation,
             escalation_type: a.dataset.escalationType || 'standard',

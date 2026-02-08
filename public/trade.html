@@ -16,6 +16,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <!-- Header -->
@@ -267,33 +268,14 @@
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Telemetry setup (behavioral/system-ish events on Trade page) ---
-      const sessionId =
-        localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-      const userId = localStorage.getItem('user_id') || 'U-mock';
-      localStorage.setItem('user_id', userId);
-      const page = 'trade';
-
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: userId,
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          metadata
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // Page view + dwell time for whole page
+      // --- Telemetry (behavioral/system events on Trade page) ---
+      Telemetry.init('trade');
       const startTs = performance.now();
-      emit('page_view');
+      Telemetry.emit('page_view');
 
       window.addEventListener('beforeunload', () => {
         const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', { ms: dwellMs });
+        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
       });
 
       // --- Step flow wiring ---
@@ -344,7 +326,7 @@
         // Per-step dwell: emit how long the last step was visible
         if (currentStep !== null) {
           const dwellMs = Math.round(performance.now() - stepStartTs);
-          emit('trade_step_dwell', {
+          Telemetry.emit('trade_step_dwell', {
             step: currentStep,
             ms: dwellMs
           });
@@ -369,22 +351,22 @@
         setStepLabelActive(stepLabel2, step >= 2);
         setStepLabelActive(stepLabel3, step >= 3);
 
-        emit('trade_step_view', { step });
+        Telemetry.emit('trade_step_view', { step });
       }
 
       // Start on step 1
       showStep(1);
-      emit('trade_flow_start');
+      Telemetry.emit('trade_flow_start');
 
       // Track when user first meaningfully interacts with the form
       tradeForm.addEventListener('focusin', () => {
         if (!formOpened) {
           formOpened = true;
-          emit('trade_form_open');
+          Telemetry.emit('trade_form_open');
           // potential abandonment
           setTimeout(() => {
             if (formOpened && currentStep < 3) {
-              emit('trade_form_abandon', { after_s: 120 });
+              Telemetry.emit('trade_form_abandon', { after_s: 120 });
             }
           }, 120000);
         }
@@ -394,27 +376,27 @@
       priceSelect.addEventListener('change', () => {
         const isLimit = priceSelect.value === 'limit';
         limitContainer.classList.toggle('hidden', !isLimit);
-        emit('price_type_change', { price_type: priceSelect.value });
+        Telemetry.emit('price_type_change', { price_type: priceSelect.value });
       });
 
       // Simple field change telemetry
       symbolInput.addEventListener('blur', () => {
         const val = symbolInput.value.trim();
         if (val.length > 0) {
-          emit('field_change', { field: 'symbol', length: val.length });
+          Telemetry.emit('field_change', { field: 'symbol', length: val.length });
         }
       });
 
       quantityInput.addEventListener('blur', () => {
         const q = Number(quantityInput.value);
         if (!Number.isNaN(q) && q > 0) {
-          emit('field_change', { field: 'quantity', value: q });
+          Telemetry.emit('field_change', { field: 'quantity', value: q });
         }
       });
 
       actionSelect.addEventListener('change', () => {
         if (actionSelect.value) {
-          emit('field_change', { field: 'action', value: actionSelect.value });
+          Telemetry.emit('field_change', { field: 'action', value: actionSelect.value });
         }
       });
 
@@ -423,7 +405,7 @@
         if (!symbol) {
           statusEl.textContent = 'Please enter a symbol or fund name.';
           statusEl.classList.add('text-red-700');
-          emit('trade_step_error', { step: 1, reason: 'missing_symbol' });
+          Telemetry.emit('trade_step_error', { step: 1, reason: 'missing_symbol' });
           return false;
         }
         return true;
@@ -447,7 +429,7 @@
         if (missing.length > 0) {
           statusEl.textContent = 'Please fill out all required fields.';
           statusEl.classList.add('text-red-700');
-          emit('trade_step_error', {
+          Telemetry.emit('trade_step_error', {
             step: 2,
             reason: 'validation',
             missing_fields: missing
@@ -489,12 +471,12 @@
       nextBtn.addEventListener('click', () => {
         if (currentStep === 1) {
           if (!validateStep1()) return;
-          emit('trade_step_next', { from: 1, to: 2 });
+          Telemetry.emit('trade_step_next', { from: 1, to: 2 });
           showStep(2);
         } else if (currentStep === 2) {
           if (!validateStep2()) return;
           updateReview();
-          emit('trade_step_next', { from: 2, to: 3 });
+          Telemetry.emit('trade_step_next', { from: 2, to: 3 });
           showStep(3);
         }
       });
@@ -502,17 +484,17 @@
       // Back button logic
       backBtn.addEventListener('click', () => {
         if (currentStep === 2) {
-          emit('trade_step_back', { from: 2, to: 1 });
+          Telemetry.emit('trade_step_back', { from: 2, to: 1 });
           showStep(1);
         } else if (currentStep === 3) {
-          emit('trade_step_back', { from: 3, to: 2 });
+          Telemetry.emit('trade_step_back', { from: 3, to: 2 });
           showStep(2);
         }
       });
 
       // Cancel button logic
       cancelBtn.addEventListener('click', () => {
-        emit('trade_flow_cancel', { step: currentStep });
+        Telemetry.emit('trade_flow_cancel', { step: currentStep });
         // For now, just reset the form and go back to step 1
         tradeForm.reset();
         limitContainer.classList.add('hidden');
@@ -527,7 +509,7 @@
 
         // Re-validate before submit
         if (!validateStep1() || !validateStep2()) {
-          emit('trade_submit_error', { reason: 'validation_on_confirm' });
+          Telemetry.emit('trade_submit_error', { reason: 'validation_on_confirm' });
           return;
         }
 
@@ -549,7 +531,7 @@
           statusEl.textContent =
             'Your order could not be submitted. Please review your order details and try again.';
           statusEl.classList.add('text-red-700');
-          emit('trade_submit_error', {
+          Telemetry.emit('trade_submit_error', {
             reason: forcedFail
               ? 'controlled_failure_qty_gt_100'
               : 'mock_rejection',
@@ -562,13 +544,13 @@
         } else {
           statusEl.textContent = 'Order submitted successfully (mock).';
           statusEl.classList.add('text-green-700');
-          emit('trade_submit_success', {
+          Telemetry.emit('trade_submit_success', {
             action,
             price_type: priceType,
             quantity: qty,
             limit_price: priceType === 'limit' ? limitPrice : null
           });
-          emit('trade_flow_complete', { success: true });
+          Telemetry.emit('trade_flow_complete', { success: true });
           formOpened = false;
           tradeForm.reset();
           limitContainer.classList.add('hidden');

@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <a
@@ -112,40 +113,21 @@
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Minimal telemetry for behavioral metrics on home page ---
-      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-      const userId = localStorage.getItem('user_id') || 'U-guest';
-      localStorage.setItem('user_id', userId);
-      const page = 'home';
-
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: userId,
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          metadata,
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // page view + dwell time
+      // --- Telemetry: behavioral metrics on home page ---
+      Telemetry.init('home');
       const startTs = performance.now();
-      emit('page_view');
+      Telemetry.emit('page_view');
 
       window.addEventListener('beforeunload', () => {
         const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', { ms: dwellMs });
+        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
       });
 
-      // CTA clicks (top-right + hero buttons)
       function trackClick(elId, target) {
         const el = document.getElementById(elId);
         if (!el) return;
         el.addEventListener('click', () => {
-          emit('cta_click', { target });
+          Telemetry.emit('cta_click', { target });
         });
       }
 

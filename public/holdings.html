@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 backdrop-blur">
@@ -136,59 +137,38 @@
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Minimal telemetry helpers (Behavioral) ---
-      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-      const userId = localStorage.getItem('user_id') || 'U-mock';
-      localStorage.setItem('user_id', userId);
-      const page = 'holdings';
-
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: userId,
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          metadata
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // page view + dwell time
+      // --- Telemetry (Behavioral) ---
+      Telemetry.init('holdings');
       const startTs = performance.now();
-      emit('page_view');
+      Telemetry.emit('page_view');
 
       window.addEventListener('beforeunload', () => {
         const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', { ms: dwellMs });
+        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
       });
 
-      // Row clicks (user exploring holdings)
       document.querySelectorAll('#holdingsTable tbody tr[data-symbol]').forEach(row => {
         row.addEventListener('click', () => {
           const symbol = row.dataset.symbol;
-          emit('holding_row_click', { symbol });
+          Telemetry.emit('holding_row_click', { symbol });
         });
       });
 
-      // Statements button: simulate failure to complete task
       const statementsBtn = document.getElementById('downloadStatementsBtn');
       const statementsStatus = document.getElementById('statementsStatus');
 
       if (statementsBtn) {
         statementsBtn.addEventListener('click', () => {
-          emit('statements_click');
-          // Simulate a "task failed successfully" type error
-          const fail = Math.random() < 0.6; // 60% fail to create frustration examples
+          Telemetry.emit('statements_click');
+          const fail = Math.random() < 0.6;
           if (fail) {
             statementsStatus.textContent = 'We could not retrieve your statement. Please try again later.';
             statementsStatus.className = 'mt-2 text-xs text-red-700';
-            emit('statements_error', { reason: 'mock_unavailable' });
+            Telemetry.emit('statements_error', { reason: 'mock_unavailable' });
           } else {
             statementsStatus.textContent = 'Your statement download has started (mock).';
             statementsStatus.className = 'mt-2 text-xs text-green-700';
-            emit('statements_success');
+            Telemetry.emit('statements_success');
           }
         });
       }

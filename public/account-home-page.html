@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <a
@@ -85,40 +86,19 @@
       // Footer year
       document.getElementById('year').textContent = new Date().getFullYear();
 
-      // --- Shared telemetry setup for account home page ---
-      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-
-      const userId = localStorage.getItem('user_id') || 'U-mock';
-      localStorage.setItem('user_id', userId);
-
-      const page = 'account_home';
-
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: userId,
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          metadata,
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // Page view + dwell time
+      // --- Telemetry for account home page ---
+      Telemetry.init('account_home');
       const startTs = performance.now();
-      emit('page_view');
+      Telemetry.emit('page_view');
 
       window.addEventListener('beforeunload', () => {
         const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', { ms: dwellMs });
+        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
       });
 
-      // Navigation click telemetry
       document.querySelectorAll('[data-nav]').forEach((el) => {
         el.addEventListener('click', () => {
-          emit('nav_click', { target: el.dataset.nav || 'unknown' });
+          Telemetry.emit('nav_click', { target: el.dataset.nav || 'unknown' });
         });
       });
 

@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
 
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
@@ -88,53 +89,30 @@
       }
 
       /* -------------------------
-         Minimal Telemetry Setup
+         Telemetry Setup
       -------------------------- */
-      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random()*100000)}`;
-      localStorage.setItem('session_id', sessionId);
-
-      const userId = localStorage.getItem('user_id') || 'U-mock';
-      localStorage.setItem('user_id', userId);
-
-      const page = "login";
-
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: userId,
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          metadata
-        };
-        console.log("Telemetry:", evt);
-      }
-
-      // Page view + dwell time
+      Telemetry.init('login');
       const startTs = performance.now();
-      emit("page_view");
+      Telemetry.emit('page_view');
 
-      window.addEventListener("beforeunload", () => {
+      window.addEventListener('beforeunload', () => {
         const dwellMs = Math.round(performance.now() - startTs);
-        emit("dwell_time", { ms: dwellMs });
+        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
       });
 
-      // Field focus
-      ["username", "password"].forEach(id => {
-        document.getElementById(id).addEventListener("focus", () => {
-          emit("field_focus", { field: id });
+      ['username', 'password'].forEach(id => {
+        document.getElementById(id).addEventListener('focus', () => {
+          Telemetry.emit('field_focus', { field: id });
         });
       });
 
-      // Remember me toggle
-      document.getElementById("rememberMe").addEventListener("change", (e) => {
-        emit("remember_toggle", { value: e.target.checked });
+      document.getElementById('rememberMe').addEventListener('change', (e) => {
+        Telemetry.emit('remember_toggle', { value: e.target.checked });
       });
 
-      // Forgot password click
-      document.getElementById("forgotPw").addEventListener("click", () => {
-        emit("forgot_password_click");
-        alert("Mock password reset flow.");
+      document.getElementById('forgotPw').addEventListener('click', () => {
+        Telemetry.emit('forgot_password_click');
+        alert('Mock password reset flow.');
       });
 
       /* -------------------------
@@ -155,7 +133,7 @@
         if (randomFail) {
           loginError.textContent = "System error. Try again."
           loginError.classList.remove("hidden");
-          emit("login_error", { reason: "system_failure" });
+          Telemetry.emit('login_error', { reason: 'system_failure' });
           return;
         }
 
@@ -163,12 +141,12 @@
         if (username === "" || pw === "" || pw.length < 3) {
           loginError.textContent = "Invalid username or password.";
           loginError.classList.remove("hidden");
-          emit("login_error", { reason: "invalid_credentials" });
+          Telemetry.emit('login_error', { reason: 'invalid_credentials' });
           return;
         }
 
         // Success
-        emit("login_success", { username });
+        Telemetry.emit('login_success', { username });
         window.location.href = "./account-home-page.html";
       });
     </script>

@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 backdrop-blur">
@@ -113,34 +114,14 @@
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Minimal telemetry + mock account creation ---
-
-      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-
-      // user_id will be assigned after successful account creation
-      const existingUserId = localStorage.getItem('user_id');
-      const page = 'create_account';
-
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: localStorage.getItem('user_id') || existingUserId || 'U-unknown',
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          metadata
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // page view + dwell time
+      // --- Telemetry + mock account creation ---
+      Telemetry.init('create_account');
       const startTs = performance.now();
-      emit('page_view');
+      Telemetry.emit('page_view');
 
       window.addEventListener('beforeunload', () => {
         const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', { ms: dwellMs });
+        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
       });
 
       const form = document.getElementById('createAccountForm');
@@ -150,17 +131,16 @@
       form.addEventListener('focusin', (e) => {
         if (!formOpened) {
           formOpened = true;
-          emit('create_form_open');
-          // If form opened but not submitted after 90s → possible abandonment
+          Telemetry.emit('create_form_open');
           setTimeout(() => {
             if (formOpened) {
-              emit('abandon_create_form', { after_s: 90 });
+              Telemetry.emit('abandon_create_form', { after_s: 90 });
             }
           }, 90000);
         }
 
         if (e.target.id) {
-          emit('field_focus', { field: e.target.id });
+          Telemetry.emit('field_focus', { field: e.target.id });
         }
       });
 
@@ -175,14 +155,14 @@
 
         // Basic client-side validation to simulate friction
         if (!fullname || !email || !pwd || !cpwd || !termsChecked) {
-          emit('create_submit_error', { reason: 'missing_fields' });
+          Telemetry.emit('create_submit_error', { reason: 'missing_fields' });
           formStatus.textContent = 'Please fill in all fields and accept the terms.';
           formStatus.className = 'text-sm text-red-700';
           return;
         }
 
         if (pwd !== cpwd) {
-          emit('create_submit_error', { reason: 'password_mismatch' });
+          Telemetry.emit('create_submit_error', { reason: 'password_mismatch' });
           formStatus.textContent = 'Passwords do not match.';
           formStatus.className = 'text-sm text-red-700';
           return;
@@ -191,7 +171,7 @@
         // Simulate occasional backend failure to create frustration
         const fail = Math.random() < 0.25; // 25% chance
         if (fail) {
-          emit('create_submit_error', { reason: 'mock_backend_failure' });
+          Telemetry.emit('create_submit_error', { reason: 'mock_backend_failure' });
           formStatus.textContent = 'Account creation failed. Please try again.';
           formStatus.className = 'text-sm text-red-700';
           return;
@@ -201,7 +181,7 @@
         const newUserId = `U${Math.floor(Math.random() * 100000)}`;
         localStorage.setItem('user_id', newUserId);
 
-        emit('create_submit_success', {
+        Telemetry.emit('create_submit_success', {
           has_fullname: !!fullname,
           email_len: email.length
         });
