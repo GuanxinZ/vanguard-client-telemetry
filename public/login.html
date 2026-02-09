@@ -88,23 +88,49 @@
         help.href = `./help.html?from=${from}`;
       }
 
-      /* -------------------------
-         Telemetry Setup
-      -------------------------- */
       Telemetry.init('login');
-      Telemetry.attachBehavioralCapture();
-      const startTs = performance.now();
-      Telemetry.emit('page_view');
+
+      const FLOW_NAME = 'login';
+      const TOTAL_STEPS = 2;
+      let currentStep = 0;
+      let loginSuccessful = false;
+
+      Telemetry.emit('flow_start', { flowName: FLOW_NAME });
 
       window.addEventListener('beforeunload', () => {
-        const dwellMs = Math.round(performance.now() - startTs);
-        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
+        if (!loginSuccessful && currentStep > 0) {
+          Telemetry.sendBeacon('flow_abandon', {
+            flowName: FLOW_NAME,
+            reason: 'page_unload',
+            lastStep: currentStep
+          });
+        }
       });
 
-      ['username', 'password'].forEach(id => {
-        document.getElementById(id).addEventListener('focus', () => {
-          Telemetry.emit('field_focus', { field: id });
-        });
+      document.getElementById('username').addEventListener('focus', () => {
+        if (currentStep === 0) {
+          currentStep = 1;
+          Telemetry.emit('flow_step', {
+            flowName: FLOW_NAME,
+            stepName: 'enter_username',
+            stepIndex: 1,
+            totalSteps: TOTAL_STEPS
+          });
+        }
+        Telemetry.emit('field_focus', { field: 'username' });
+      });
+
+      document.getElementById('password').addEventListener('focus', () => {
+        if (currentStep === 1) {
+          currentStep = 2;
+          Telemetry.emit('flow_step', {
+            flowName: FLOW_NAME,
+            stepName: 'enter_password',
+            stepIndex: 2,
+            totalSteps: TOTAL_STEPS
+          });
+        }
+        Telemetry.emit('field_focus', { field: 'password' });
       });
 
       document.getElementById('rememberMe').addEventListener('change', (e) => {
@@ -113,12 +139,14 @@
 
       document.getElementById('forgotPw').addEventListener('click', () => {
         Telemetry.emit('forgot_password_click');
+        Telemetry.emit('flow_abandon', {
+          flowName: FLOW_NAME,
+          reason: 'forgot_password',
+          lastStep: currentStep
+        });
         alert('Mock password reset flow.');
       });
 
-      /* -------------------------
-         Login Submit Simulation
-      -------------------------- */
       const loginForm = document.getElementById("loginForm");
       const loginError = document.getElementById("loginError");
       let loginAttemptCount = 0;
@@ -154,8 +182,9 @@
           return;
         }
 
-        // Success
+        loginSuccessful = true;
         Telemetry.emit('login_success', { username });
+        Telemetry.emit('flow_complete', { flowName: FLOW_NAME });
         window.location.href = "./account-home-page.html";
       });
     </script>

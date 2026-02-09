@@ -114,34 +114,51 @@
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Telemetry + mock account creation ---
       Telemetry.init('create_account');
-      Telemetry.attachBehavioralCapture();
-      const startTs = performance.now();
-      Telemetry.emit('page_view');
 
-      window.addEventListener('beforeunload', () => {
-        const dwellMs = Math.round(performance.now() - startTs);
-        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
-      });
+      const FLOW_NAME = 'onboarding';
+      const TOTAL_STEPS = 4;
+      const STEP_FIELDS = {
+        fullname: { stepIndex: 1, stepName: 'enter_name' },
+        email: { stepIndex: 2, stepName: 'enter_email' },
+        password: { stepIndex: 3, stepName: 'create_password' },
+        'confirm-password': { stepIndex: 4, stepName: 'confirm_password' }
+      };
 
       const form = document.getElementById('createAccountForm');
       const formStatus = document.getElementById('formStatus');
-      let formOpened = false;
+      let flowStarted = false;
+      let onboardingComplete = false;
+      let currentStep = 0;
       let createAttemptCount = 0;
 
+      window.addEventListener('beforeunload', () => {
+        if (flowStarted && !onboardingComplete) {
+          Telemetry.sendBeacon('flow_abandon', {
+            flowName: FLOW_NAME,
+            reason: 'page_unload',
+            lastStep: currentStep
+          });
+        }
+      });
+
       form.addEventListener('focusin', (e) => {
-        if (!formOpened) {
-          formOpened = true;
-          Telemetry.emit('create_form_open');
-          setTimeout(() => {
-            if (formOpened) {
-              Telemetry.emit('abandon_create_form', { after_s: 90 });
-            }
-          }, 90000);
+        if (!flowStarted) {
+          flowStarted = true;
+          Telemetry.emit('flow_start', { flowName: FLOW_NAME });
         }
 
-        if (e.target.id) {
+        if (e.target.id && STEP_FIELDS[e.target.id]) {
+          const stepInfo = STEP_FIELDS[e.target.id];
+          if (stepInfo.stepIndex > currentStep) {
+            currentStep = stepInfo.stepIndex;
+            Telemetry.emit('flow_step', {
+              flowName: FLOW_NAME,
+              stepName: stepInfo.stepName,
+              stepIndex: stepInfo.stepIndex,
+              totalSteps: TOTAL_STEPS
+            });
+          }
           Telemetry.emit('field_focus', { field: e.target.id });
         }
       });
@@ -189,19 +206,20 @@
           return;
         }
 
-        // "Successful" account creation: assign a user_id and redirect to login
         const newUserId = `U${Math.floor(Math.random() * 100000)}`;
-        localStorage.setItem('user_id', newUserId);
+        localStorage.setItem('userId', newUserId);
 
+        onboardingComplete = true;
         Telemetry.emit('create_submit_success', {
-          has_fullname: !!fullname,
-          email_len: email.length
+          hasFullname: !!fullname,
+          emailLen: email.length
         });
+        Telemetry.emit('flow_complete', { flowName: FLOW_NAME });
 
         formStatus.textContent = 'Account created successfully! Redirecting to login...';
         formStatus.className = 'text-sm text-green-700';
 
-        formOpened = false;
+        flowStarted = false;
         createAttemptCount = 0;
 
         setTimeout(() => {

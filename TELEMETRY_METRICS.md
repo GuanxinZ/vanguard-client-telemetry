@@ -42,18 +42,30 @@ Every event includes:
 
 | event_type | metadata | SDD § | Pages |
 |------------|----------|-------|-------|
-| `click` | `tag`, `id`, `role`, `text_len` | 6.1.1 (click counts) | All |
-| `scroll_depth` | `pct` (0.25, 0.5, 0.75, 1), `scroll_y` | 5.2 (behavioral) | All |
+| `click` | `tag`, `id`, `role`, `textLen` | 6.1.1 (click counts) | All |
+| `scroll_depth` | `pct` (0.25, 0.5, 0.75, 1), `scrollY` | 5.2 (behavioral) | All |
 | `idle_time` | `ms` | 6.1.1 (idle time) | All |
-| `refocus` | `field`, `ms_since_blur` | 6.1.1 (refocus behavior) | All |
+| `refocus` | `field`, `msSinceBlur` | 6.1.1 (refocus behavior) | All |
 | `nav_backtrack` | `direction` | 6.1.1 (backtracking) | All |
+| `rage_click` | `element`, `clickCount`, `tag`, `id`, `text` | 6.1.1 (click behavior) | All |
+| `system_error` | `message`, `filename`, `lineno`, `colno`, `errorType` | 6.1.1 (errors) | All |
+
+### Universal Flow Events
+
+| event_type | metadata | SDD § | Pages |
+|------------|----------|-------|-------|
+| `flow_start` | `flowName` | 5.2 (journey tracking) | trade, login, create_account |
+| `flow_step` | `flowName`, `stepName`, `stepIndex`, `totalSteps` | 5.2 (journey tracking) | trade, login, create_account |
+| `flow_complete` | `flowName` | 5.2 (journey tracking) | trade, login, create_account |
+| `flow_abandon` | `flowName`, `reason`, `lastStep` | 6.1.1 (abandonment) | trade, login, create_account |
 
 ### Page-Level & Dwell
 
 | event_type | metadata | SDD § | Pages |
 |------------|----------|-------|-------|
-| `page_view` | `source`, `from_page` (when applicable) | 5.2 | All |
-| `dwell_time` | `ms` | 6.1.1 (dwell time) | All |
+| `page_view` | `source`, `fromPage` (when applicable) | 5.2 | All |
+| `page_view_end` | `dwellMs` | 6.1.1 (dwell time) | All |
+| `form_abandonment` | `pageRoute`, `dwellMs` | 6.1.1 (abandonment) | All |
 
 ### Home (index.html)
 

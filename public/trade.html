@@ -276,6 +276,9 @@
 
       let currentStep = null;
       let stepStartTs = performance.now();
+      const FLOW_NAME = 'trade';
+      const TOTAL_STEPS = 3;
+      const STEP_NAMES = ['select_asset', 'trade_details', 'review'];
 
       function setStepLabelActive(labelEl, active) {
         if (active) {
@@ -288,7 +291,6 @@
       }
 
       function showStep(step) {
-        // Per-step dwell
         if (currentStep !== null) {
           const dwellMs = Math.round(performance.now() - stepStartTs);
           Telemetry.emit('trade_step_dwell', { step: currentStep, ms: dwellMs });
@@ -312,11 +314,16 @@
         setStepLabelActive(stepLabel2, step >= 2);
         setStepLabelActive(stepLabel3, step >= 3);
 
-        Telemetry.emit('trade_step_view', { step });
+        Telemetry.emit('flow_step', {
+          flowName: FLOW_NAME,
+          stepName: STEP_NAMES[step - 1],
+          stepIndex: step,
+          totalSteps: TOTAL_STEPS
+        });
       }
 
       showStep(1);
-      Telemetry.emit('trade_flow_start');
+      Telemetry.emit('flow_start', { flowName: FLOW_NAME });
 
       // Price type changes
       priceSelect.addEventListener('change', () => {
@@ -418,7 +425,11 @@
       });
 
       cancelBtn.addEventListener('click', () => {
-        Telemetry.emit('trade_flow_cancel', { step: currentStep });
+        Telemetry.emit('flow_abandon', {
+          flowName: FLOW_NAME,
+          reason: 'user_cancel',
+          lastStep: currentStep
+        });
         tradeForm.reset();
         limitContainer.classList.add('hidden');
         showStep(1);
@@ -469,11 +480,11 @@
           statusEl.classList.add('text-green-700');
           Telemetry.emit('trade_submit_success', {
             action,
-            price_type: priceType,
+            priceType,
             quantity: qty,
-            limit_price: priceType === 'limit' ? limitPrice : null
+            limitPrice: priceType === 'limit' ? limitPrice : null
           });
-          Telemetry.emit('trade_flow_complete', { success: true });
+          Telemetry.emit('flow_complete', { flowName: FLOW_NAME });
           tradeSubmitAttemptCount = 0;
           tradeForm.reset();
           limitContainer.classList.add('hidden');
