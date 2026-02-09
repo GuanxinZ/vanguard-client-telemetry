@@ -233,6 +233,41 @@
     <script src="telemetry.js"></script>
 
     <script>
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * TRADE FLOW (USER JOURNEY INSTRUMENTATION)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Journey Type: Multi-Step Form (High-Value Transaction Flow)
+       * 
+       * Business Context:
+       *   The trade execution flow is a critical revenue-impacting funnel where 
+       *   users place buy/sell orders. Drop-offs here directly correlate with 
+       *   lost trading volume and customer satisfaction issues.
+       * 
+       * Telemetry Schema (Universal Journey Pattern):
+       *   1. flow_start: Marks funnel entry (when page loads)
+       *   2. flow_step: Emitted on each step transition (tracks progression)
+       *   3. flow_abandon: Captures exit (Cancel button or page unload)
+       *   4. flow_complete: Success event (order confirmed)
+       * 
+       * Step Tracking Logic:
+       *   - Step 1: Select Asset (symbol input)
+       *   - Step 2: Trade Details (action, quantity, price type)
+       *   - Step 3: Review & Confirm
+       * 
+       * Abandonment Detection:
+       *   - Explicit: Cancel button click → flow_abandon with reason='user_cancel'
+       *   - Implicit: beforeunload listener in telemetry.js captures page exit
+       *     (form_abandonment event fires if fields were touched but not submitted)
+       * 
+       * Why This Matters:
+       *   - Step-level dwell times reveal UX bottlenecks (e.g., users stuck on Step 2)
+       *   - Abandon reasons enable prioritization (if 80% cancel on price type selector,
+       *     indicates confusing UI or lack of education)
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
       // --- Basic setup ---
       document.getElementById('year').textContent = new Date().getFullYear();
       const help = document.getElementById('helpLink');
@@ -274,6 +309,16 @@
       const reviewPriceType = document.getElementById('reviewPriceType');
       const reviewLimitPrice = document.getElementById('reviewLimitPrice');
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Flow State Management
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * currentStep: Tracks which step user is on (1-indexed for readability)
+       * stepStartTs: Performance timestamp when current step began (for dwell calc)
+       * FLOW_NAME: Unique identifier for this journey (consistent across all events)
+       * STEP_NAMES: Human-readable labels for ML feature engineering
+       */
       let currentStep = null;
       let stepStartTs = performance.now();
       const FLOW_NAME = 'trade';
@@ -322,6 +367,15 @@
         });
       }
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * FLOW START: Funnel Entry Point
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Emitted immediately after page load to establish funnel cohort.
+       * All subsequent events (flow_step, flow_abandon, flow_complete) are 
+       * joined to this event via sessionId for conversion rate analysis.
+       */
       showStep(1);
       Telemetry.emit('flow_start', { flowName: FLOW_NAME });
 
@@ -424,6 +478,16 @@
         }
       });
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * ABANDONMENT: Explicit User Exit
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Captures intentional drop-offs via Cancel button.
+       * lastStep indicates where user gave up (critical for prioritizing fixes).
+       * 
+       * Complemented by implicit abandonment (see telemetry.js beforeunload handler).
+       */
       cancelBtn.addEventListener('click', () => {
         Telemetry.emit('flow_abandon', {
           flowName: FLOW_NAME,

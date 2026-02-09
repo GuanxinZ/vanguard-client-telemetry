@@ -104,16 +104,47 @@
     </footer>
 
     <script>
-      // --- Basic footer + Help link context ---
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * HOME PAGE (LANDING/ENTRY POINT)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Page Purpose: Marketing landing page and primary entry point for unauthenticated users.
+       * 
+       * Telemetry Objectives:
+       *   1. Measure engagement with call-to-action (CTA) buttons
+       *   2. Track which CTAs convert (header vs. hero section)
+       *   3. Capture behavioral signals (scroll depth, time on page, hesitation)
+       * 
+       * Key Events:
+       *   - page_view: Auto-captured by Telemetry.init()
+       *   - cta_click: Explicit tracking for conversion funnel analysis
+       *   - Global behavioral: Rage clicks, scroll depth, idle time (auto-captured)
+       * 
+       * Business Context:
+       *   Home page is the first touch point for new users. High drop-off rates
+       *   here indicate messaging problems or unclear value proposition.
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
+      // Basic setup
       document.getElementById('year').textContent = new Date().getFullYear();
 
+      // Dynamic Help link context (tells help page where user came from)
       const help = document.getElementById('helpLink');
       if (help) {
         const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Telemetry: behavioral metrics on home page ---
+      // ─────────────────────────────────────────────────────────────────────
+      // TELEMETRY INITIALIZATION
+      // ─────────────────────────────────────────────────────────────────────
+      // Telemetry.init() automatically:
+      //   - Generates/retrieves sessionId and userId
+      //   - Attaches global behavioral listeners (clicks, scrolls, idle, etc.)
+      //   - Emits 'page_view' event
+      //   - Sets up beforeunload handler for dwell time and form abandonment
       Telemetry.init('home');
       Telemetry.attachBehavioralCapture();
       const startTs = performance.now();
@@ -124,6 +155,22 @@
         Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
       });
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * CTA CLICK TRACKING (Conversion Funnel)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Measure which CTAs drive conversions (Login vs. Create Account)
+       * 
+       * Tracking Strategy:
+       *   - Header buttons: login_header, create_header
+       *   - Hero section buttons: login_main, create_main
+       * 
+       * Why This Matters:
+       *   If 90% of clicks come from hero section, header nav might need redesign.
+       *   If create_account CTAs get more clicks than login, indicates strong
+       *   acquisition but potential retention issues.
+       */
       function trackClick(elId, target) {
         const el = document.getElementById(elId);
         if (!el) return;

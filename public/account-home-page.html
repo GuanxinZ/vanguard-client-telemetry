@@ -83,10 +83,43 @@
     </footer>
 
     <script>
-      // Footer year
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * ACCOUNT HOME PAGE (POST-LOGIN DASHBOARD)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Page Purpose: Primary landing page after successful authentication.
+       * 
+       * Telemetry Objectives:
+       *   1. Track navigation patterns (which features do users access first?)
+       *   2. Measure engagement depth (do users explore or immediately exit?)
+       *   3. Capture behavioral signals (scroll depth indicates content consumption)
+       * 
+       * Key Events:
+       *   - page_view: Auto-captured by Telemetry.init()
+       *   - nav_click: Tracks which dashboard sections users access
+       *   - Global behavioral: Scroll depth, dwell time, idle time (auto-captured)
+       * 
+       * Business Context:
+       *   Account home is the "hub" of authenticated experience. Navigation patterns
+       *   here reveal feature discoverability and user intent. If 90% of users
+       *   immediately click "Trade", other features may be underutilized or
+       *   poorly positioned.
+       * 
+       * For New Developers:
+       *   This page demonstrates minimal telemetry instrumentation:
+       *     1. Single Telemetry.init() call handles all global capture
+       *     2. Only feature-specific events (nav_click) require explicit tracking
+       *     3. No flow tracking needed (this is a navigation hub, not a journey)
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
+      // Basic setup
       document.getElementById('year').textContent = new Date().getFullYear();
 
-      // --- Telemetry for account home page ---
+      // ─────────────────────────────────────────────────────────────────────
+      // TELEMETRY INITIALIZATION
+      // ─────────────────────────────────────────────────────────────────────
       Telemetry.init('account_home');
       Telemetry.attachBehavioralCapture();
       const startTs = performance.now();
@@ -97,13 +130,29 @@
         Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
       });
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Navigation Click Tracking
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Understand which features users access from dashboard.
+       * 
+       * Implementation Pattern:
+       *   - Uses data-nav attribute on clickable elements
+       *   - Targets: 'holdings', 'trade', 'help' (add more as needed)
+       * 
+       * Phase 2 Analysis Use Cases:
+       *   - Conversion funnel: account_home → trade (did they trade?)
+       *   - Feature adoption: % of users who click 'holdings' vs 'trade'
+       *   - Support predictor: nav_click to 'help' = confusion signal
+       */
       document.querySelectorAll('[data-nav]').forEach((el) => {
         el.addEventListener('click', () => {
           Telemetry.emit('nav_click', { target: el.dataset.nav || 'unknown' });
         });
       });
 
-      // Dynamically append ?from=<page-name> to Help link for context
+      // Dynamic Help link context (tells help page where user came from)
       const help = document.getElementById('helpLink');
       if (help) {
         const from = 'account_home';

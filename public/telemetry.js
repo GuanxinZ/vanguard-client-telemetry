@@ -1,6 +1,29 @@
 /**
- * Vanguard Client Telemetry (Phase 1)
- * Captures behavioral, system, and sentiment-adjacent events per SDD requirements.
+ * ═══════════════════════════════════════════════════════════════════════════
+ * CLIENT-SIDE TELEMETRY SDK
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Purpose: Universal JavaScript library for capturing behavioral, system, and 
+ * sentiment-adjacent events across all user journeys.
+ * 
+ * Core Responsibilities:
+ *   1. Event Collection: Automatically captures user interactions (clicks, scrolls, 
+ *      form activity) without requiring manual instrumentation in business logic.
+ *   2. Data Normalization: Enforces consistent schema (camelCase, elementId extraction) 
+ *      to enable downstream ML feature engineering.
+ *   3. Behavioral Metrics: Implements detection algorithms for friction signals 
+ *      (rage clicks, form abandonment, refocus patterns).
+ * 
+ * Architecture Pattern:
+ *   - Singleton design pattern for global state management
+ *   - Event-driven architecture using native DOM listeners
+ *   - Fire-and-forget transmission (does not block UI thread)
+ * 
+ * Integration:
+ *   - Initialize once per page: Telemetry.init('pageRoute', {...contextOptions})
+ *   - Emits events to server via POST /api/telemetry
+ *   - Uses sendBeacon() for critical events during page unload
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 const Telemetry = {
   pageRoute: null,
@@ -31,6 +54,22 @@ const Telemetry = {
     this.emit('page_view');
   },
 
+  /**
+   * Data Normalization Engine
+   * 
+   * Why we enforce this schema:
+   *   - Promotes `id` to top-level `elementId` for ML feature engineering
+   *   - Ensures consistent camelCase naming (critical for JSON parsing in Python/R)
+   *   - Isolates business-specific metadata from universal context fields
+   * 
+   * Schema Contract:
+   *   {
+   *     sessionId, userId, pageRoute, eventType, timestamp, url,
+   *     elementId? (extracted from metadata.id),
+   *     ...baseContext (page-level attrs),
+   *     metadata: {...} (event-specific data)
+   *   }
+   */
   _buildEvent(eventType, metadata = {}) {
     const { id, ...restMetadata } = metadata;
     return {
@@ -88,6 +127,26 @@ const Telemetry = {
     if (this._behavioralAttached) return;
     this._behavioralAttached = true;
 
+    /**
+     * ───────────────────────────────────────────────────────────────────────
+     * RAGE CLICK DETECTION: Sliding Window Algorithm
+     * ───────────────────────────────────────────────────────────────────────
+     * 
+     * Business Context:
+     *   Rapid clicks on the same element indicate user frustration (broken button,
+     *   unresponsive UI, or confusing affordance).
+     * 
+     * Algorithm:
+     *   - Maintains a per-element timestamp history in a Map
+     *   - Filters clicks within 800ms window (psychometric research shows <1s = frustration)
+     *   - Triggers 'rage_click' event when ≥3 clicks occur in this window
+     *   - Resets history after detection to avoid duplicate events
+     * 
+     * Why 800ms?
+     *   Studies show intentional double-clicks occur at 200-400ms intervals.
+     *   Frustration manifests as 3+ clicks spaced 100-300ms apart (avg ~200ms).
+     *   800ms window captures this pattern while excluding normal UX behaviors.
+     */
     const clickHistory = new Map();
     const RAGE_CLICK_THRESHOLD = 3;
     const RAGE_CLICK_WINDOW_MS = 800;
@@ -214,6 +273,30 @@ const Telemetry = {
       this.emit('nav_backtrack', { direction: 'back' });
     });
 
+    /**
+     * ───────────────────────────────────────────────────────────────────────
+     * FORM ABANDONMENT DETECTION
+     * ───────────────────────────────────────────────────────────────────────
+     * 
+     * Business Context:
+     *   Users who start filling a form but leave without submitting represent
+     *   high-value drop-off points in conversion funnels (login, trade, onboarding).
+     * 
+     * Detection Logic (Boolean State Machine):
+     *   1. _formInteracted: Set to TRUE when user focuses any form field
+     *   2. _formSubmitted: Set to TRUE when form submission occurs
+     *   3. beforeunload: If (_formInteracted AND NOT _formSubmitted) → ABANDONED
+     * 
+     * Why use beforeunload?
+     *   - Captures ALL exit methods (close tab, navigate away, back button)
+     *   - Uses sendBeacon() to ensure event fires even during page termination
+     *   - Cannot rely on click handlers alone (users may refresh, or browser crash)
+     * 
+     * Limitations:
+     *   - Does not distinguish between accidental vs. intentional abandonment
+     *   - Autofill/password managers may trigger false positives (mitigated by 
+     *     requiring actual focus events, not just input changes)
+     */
     document.addEventListener('focusin', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
         this._formInteracted = true;

@@ -216,9 +216,45 @@
     </footer>
 
     <script>
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * HELP PAGE (SELF-SERVICE SUPPORT)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Page Purpose: Self-service support center with FAQs, search, and escalation options.
+       * 
+       * Telemetry Objectives:
+       *   1. Capture sentiment-adjacent signals (help visits indicate confusion/frustration)
+       *   2. Measure self-service effectiveness (which FAQs resolve issues?)
+       *   3. Track escalation patterns (when do users give up and request human support?)
+       * 
+       * Key Events:
+       *   - page_view: Auto-captured (with from_page context to identify source of confusion)
+       *   - help_search: Captures search terms (reveals common pain points)
+       *   - faq_open/faq_close: Measures engagement with self-help content
+       *   - faq_solved: User self-reports issue resolution (success metric)
+       *   - contact_open: User starts escalation (indicates self-service failure)
+       *   - contact_submit_error: Form failures compound frustration
+       *   - escalation_click: Critical signal of user giving up (high-value support lead)
+       * 
+       * Business Context:
+       *   Help page visits correlate with user frustration. High traffic here without
+       *   corresponding increase in FAQs "solved" indicates content gaps or usability issues.
+       *   Escalation events predict support ticket volume (early warning system).
+       * 
+       * SDD Reference:
+       *   - §5.2: Sentiment-adjacent events (help visits, escalation clicks)
+       *   - §6.1.1: Form abandonment indicators (contact form)
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
       document.getElementById('year').textContent = new Date().getFullYear();
 
-      // --- Telemetry (help page) ---
+      // ─────────────────────────────────────────────────────────────────────
+      // CONTEXT PROPAGATION: Track which page sent user to help
+      // ─────────────────────────────────────────────────────────────────────
+      // URL format: help.html?from=trade.html
+      // This enables analysis like: "80% of help visits come from trade page"
       const params = new URLSearchParams(window.location.search);
       const fromPage = params.get('from') || 'unknown';
       Telemetry.init('help', { from_page: fromPage });
@@ -235,7 +271,16 @@
         });
       });
 
-      // search
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Help Search Tracking
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Capture what users are searching for (reveals knowledge gaps).
+       * 
+       * Privacy Note: We only track query length, not actual search terms
+       * (to avoid capturing PII like "How do I recover account for john@email.com")
+       */
       const helpSearchForm = document.getElementById('helpSearchForm');
       helpSearchForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -248,7 +293,20 @@
         alert('Mock search submitted.');
       });
 
-      // faq open/close & solved
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * FAQ Interaction Tracking
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Tracked Events:
+       *   - faq_open: User expands an FAQ (measures interest)
+       *   - faq_close: User collapses FAQ (measures engagement duration)
+       *   - faq_solved: User clicks "Did this solve your problem?" YES button
+       * 
+       * Success Metric: faq_solved / faq_open ratio
+       *   High ratio = effective self-service content
+       *   Low ratio = content doesn't answer user's actual question
+       */
       document.getElementById('faqList').addEventListener(
         'toggle',
         (e) => {
@@ -274,7 +332,26 @@
         }
       });
 
-      // contact: open (first focus), submit with random failure
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Contact Form Tracking (Escalation Funnel)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Measure when self-service fails and users need human support.
+       * 
+       * Tracked Events:
+       *   - contact_open: User starts filling contact form (frustration signal)
+       *   - abandon_contact_form: User leaves form without submitting (after 90s)
+       *   - contact_submit_error: Form submission fails (25% mock failure rate)
+       *   - contact_submit_success: Form successfully submitted
+       * 
+       * Business Context:
+       *   Contact form usage = failure of self-service content. High volume here
+       *   indicates need for better FAQs, documentation, or UX improvements.
+       *   
+       *   Form submission errors compound frustration (user already confused, now
+       *   can't even ask for help). Critical UX failure point.
+       */
       const contactForm = document.getElementById('contactForm');
       const contactStatus = document.getElementById('contactStatus');
       let contactOpened = false;
@@ -328,7 +405,27 @@
         }
       });
 
-      // escalation clicks (chat / call / secure msg)
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Escalation Button Tracking (High-Value Support Signals)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Capture when users choose expensive support channels.
+       * 
+       * Escalation Channels:
+       *   - chat: Live chat (medium cost, instant)
+       *   - call: Phone support (high cost, synchronous)
+       *   - secure_message: Async messaging (low cost, delayed)
+       * 
+       * Why This Matters:
+       *   Each escalation click represents:
+       *     1. Failed self-service (cost of content gap)
+       *     2. Incoming support demand (staffing forecast)
+       *     3. High frustration signal (risk of churn)
+       * 
+       *   Phase 2 Analysis: Correlate escalation_click with prior events to
+       *   identify friction points (e.g., 60% of escalations after trade errors)
+       */
       document.querySelectorAll('[data-escalation]').forEach((a) => {
         a.addEventListener('click', (e) => {
           e.preventDefault();

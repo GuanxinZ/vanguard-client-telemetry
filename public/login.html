@@ -79,6 +79,34 @@
     </footer>
 
     <script>
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * LOGIN FLOW (USER JOURNEY INSTRUMENTATION)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Journey Type: Authentication Gate (Critical Path to Application)
+       * 
+       * Business Context:
+       *   Login is the primary entry point to the authenticated experience.
+       *   Drop-offs here prevent users from accessing their accounts, directly
+       *   impacting engagement metrics and support volume (password resets).
+       * 
+       * Telemetry Schema (Universal Journey Pattern):
+       *   1. flow_start: Marks authentication attempt begins
+       *   2. flow_step: Tracks field-level progression (username → password)
+       *   3. flow_abandon: Captures exit (forgot password, page close, or navigation)
+       *   4. flow_complete: Success event (login succeeds)
+       * 
+       * Step Tracking Logic:
+       *   - Step 1: Enter Username (triggered on first focus)
+       *   - Step 2: Enter Password (triggered when password field focused)
+       * 
+       * Abandonment Detection:
+       *   - Explicit: "Forgot password" click → flow_abandon with reason='forgot_password'
+       *   - Implicit: beforeunload listener fires if user exits mid-flow
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
       document.getElementById('year').textContent = new Date().getFullYear();
 
       // Append ?from=<page> to Help link
@@ -95,8 +123,22 @@
       let currentStep = 0;
       let loginSuccessful = false;
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * FLOW START: Authentication Funnel Entry
+       * ─────────────────────────────────────────────────────────────────────
+       */
       Telemetry.emit('flow_start', { flowName: FLOW_NAME });
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * ABANDONMENT: Implicit Exit (Page Close/Navigation)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Fires when user exits page without completing login.
+       * currentStep > 0 ensures we only track abandonment after engagement
+       * (prevents false positives from accidental page loads).
+       */
       window.addEventListener('beforeunload', () => {
         if (!loginSuccessful && currentStep > 0) {
           Telemetry.sendBeacon('flow_abandon', {
@@ -107,6 +149,15 @@
         }
       });
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * STEP TRACKING: Progressive Disclosure
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Tracks when user advances through authentication fields.
+       * currentStep guard prevents duplicate events on refocus.
+       * stepIndex/totalSteps enable funnel visualization in analytics.
+       */
       document.getElementById('username').addEventListener('focus', () => {
         if (currentStep === 0) {
           currentStep = 1;

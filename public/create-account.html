@@ -104,6 +104,34 @@
     </footer>
 
     <script>
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * ONBOARDING FLOW (USER JOURNEY INSTRUMENTATION)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Journey Type: Account Creation (New User Acquisition Funnel)
+       * 
+       * Business Context:
+       *   The onboarding flow converts anonymous visitors into registered users.
+       *   Drop-offs here directly impact user acquisition costs (CAC) and growth metrics.
+       * 
+       * Telemetry Schema (Universal Journey Pattern):
+       *   1. flow_start: Marks when user begins account creation
+       *   2. flow_step: Tracks field-level progression (name → email → password → confirm)
+       *   3. flow_abandon: Captures exit (page close or navigation away)
+       *   4. flow_complete: Success event (account created)
+       * 
+       * Step Tracking Logic:
+       *   - Steps are field-based (not page-based like trade.html)
+       *   - Each field focus advances step counter (prevents duplicate events)
+       *   - Map structure enables easy lookup: STEP_FIELDS[fieldId] → {stepIndex, stepName}
+       * 
+       * Abandonment Detection:
+       *   - Implicit: beforeunload fires if flowStarted but not onboardingComplete
+       *   - Also benefits from telemetry.js form_abandonment event (if fields touched)
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
       // --- Footer year ---
       document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -118,6 +146,16 @@
 
       const FLOW_NAME = 'onboarding';
       const TOTAL_STEPS = 4;
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Field-to-Step Mapping (Declarative Step Tracking)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Maps form field IDs to journey steps. This pattern enables:
+       *   - Automatic step detection via focusin listener
+       *   - Easy maintenance (add new fields without modifying event logic)
+       *   - Consistent stepIndex values for funnel analysis
+       */
       const STEP_FIELDS = {
         fullname: { stepIndex: 1, stepName: 'enter_name' },
         email: { stepIndex: 2, stepName: 'enter_email' },
@@ -132,6 +170,16 @@
       let currentStep = 0;
       let createAttemptCount = 0;
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * ABANDONMENT: Implicit Exit (Page Close/Navigation)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Fires when user exits mid-onboarding without completing signup.
+       * Guards:
+       *   - flowStarted: Ensures flow_start was emitted (user engaged with form)
+       *   - !onboardingComplete: Prevents firing after successful submission
+       */
       window.addEventListener('beforeunload', () => {
         if (flowStarted && !onboardingComplete) {
           Telemetry.sendBeacon('flow_abandon', {
@@ -142,6 +190,19 @@
         }
       });
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * FLOW START + STEP TRACKING: Lazy Initialization
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * flow_start is emitted on first field interaction (not page load) to
+       * exclude users who land on page but never engage (reduces noise in funnel).
+       * 
+       * Step progression logic:
+       *   - Looks up field in STEP_FIELDS map
+       *   - Only advances if stepIndex > currentStep (prevents duplicate events)
+       *   - Allows non-linear navigation (e.g., user clicks password first → Step 3)
+       */
       form.addEventListener('focusin', (e) => {
         if (!flowStarted) {
           flowStarted = true;
