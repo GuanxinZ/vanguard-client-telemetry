@@ -257,19 +257,7 @@
       // This enables analysis like: "80% of help visits come from trade page"
       const params = new URLSearchParams(window.location.search);
       const fromPage = params.get('from') || 'unknown';
-      Telemetry.init('help', { from_page: fromPage });
-      Telemetry.attachBehavioralCapture();
-
-      const startTs = performance.now();
-      Telemetry.emit('page_view', { source: 'help_page' });
-
-      window.addEventListener('beforeunload', () => {
-        const dwellMs = Math.round(performance.now() - startTs);
-        Telemetry.sendBeacon('dwell_time', {
-          source: 'help_page',
-          ms: dwellMs,
-        });
-      });
+      Telemetry.init('help', { from_page: fromPage, source: 'help_page' });
 
       /**
        * ─────────────────────────────────────────────────────────────────────

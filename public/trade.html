@@ -276,7 +276,7 @@
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Initialize Telemetry (auto-captures page_view, dwell_time, behavioral metrics) ---
+      // --- Initialize Telemetry (auto-captures page_view, page_view_end with dwellMs, behavioral metrics) ---
       Telemetry.init('trade');
 
       // --- Step flow logic ---
@@ -316,11 +316,13 @@
        * 
        * currentStep: Tracks which step user is on (1-indexed for readability)
        * stepStartTs: Performance timestamp when current step began (for dwell calc)
+       * tradeCompleted: Guards against emitting flow_abandon after flow_complete
        * FLOW_NAME: Unique identifier for this journey (consistent across all events)
        * STEP_NAMES: Human-readable labels for ML feature engineering
        */
       let currentStep = null;
       let stepStartTs = performance.now();
+      let tradeCompleted = false;
       const FLOW_NAME = 'trade';
       const TOTAL_STEPS = 3;
       const STEP_NAMES = ['select_asset', 'trade_details', 'review'];
@@ -338,7 +340,12 @@
       function showStep(step) {
         if (currentStep !== null) {
           const dwellMs = Math.round(performance.now() - stepStartTs);
-          Telemetry.emit('trade_step_dwell', { step: currentStep, ms: dwellMs });
+          Telemetry.emit('step_dwell', { 
+            flowName: FLOW_NAME,
+            step: currentStep, 
+            stepName: STEP_NAMES[currentStep - 1],
+            ms: dwellMs 
+          });
         }
 
         currentStep = step;
@@ -378,6 +385,24 @@
        */
       showStep(1);
       Telemetry.emit('flow_start', { flowName: FLOW_NAME });
+
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * ABANDONMENT: Implicit Exit Detection
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Only fires if user leaves page WITHOUT completing the flow.
+       * tradeCompleted flag prevents double-counting business failures as abandons.
+       */
+      window.addEventListener('beforeunload', () => {
+        if (!tradeCompleted) {
+          Telemetry.sendBeacon('flow_abandon', {
+            flowName: FLOW_NAME,
+            reason: 'page_unload',
+            lastStep: currentStep
+          });
+        }
+      });
 
       // Price type changes
       priceSelect.addEventListener('change', () => {
@@ -458,12 +483,10 @@
       nextBtn.addEventListener('click', () => {
         if (currentStep === 1) {
           if (!validateStep1()) return;
-          Telemetry.emit('trade_step_next', { from: 1, to: 2 });
           showStep(2);
         } else if (currentStep === 2) {
           if (!validateStep2()) return;
           updateReview();
-          Telemetry.emit('trade_step_next', { from: 2, to: 3 });
           showStep(3);
         }
       });
@@ -485,10 +508,10 @@
        * 
        * Captures intentional drop-offs via Cancel button.
        * lastStep indicates where user gave up (critical for prioritizing fixes).
-       * 
-       * Complemented by implicit abandonment (see telemetry.js beforeunload handler).
+       * Sets tradeCompleted flag to prevent duplicate beforeunload event.
        */
       cancelBtn.addEventListener('click', () => {
+        tradeCompleted = true;
         Telemetry.emit('flow_abandon', {
           flowName: FLOW_NAME,
           reason: 'user_cancel',
@@ -500,6 +523,7 @@
       });
 
       let tradeSubmitAttemptCount = 0;
+      
       confirmBtn.addEventListener('click', () => {
         statusEl.textContent = '';
         statusEl.className = 'text-sm mt-4';
@@ -524,31 +548,49 @@
         const mockFail = forcedFail || randomFail;
 
         if (mockFail) {
+          // Business failure: User SUBMITTED but system REJECTED
           statusEl.textContent = 'Your order could not be submitted. Please review your order details and try again.';
           statusEl.classList.add('text-red-700');
+          
+          const failureReason = forcedFail ? 'controlled_failure_qty_gt_100' : 'mock_rejection';
           Telemetry.emit('trade_submit_error', {
-            reason: forcedFail ? 'controlled_failure_qty_gt_100' : 'mock_rejection',
+            reason: failureReason,
             action,
             price_type: priceType,
             quantity: qty,
             has_limit_price: priceType === 'limit',
             forced_failure: forcedFail
           });
+          
+          // Mark as completed (with failure status) to prevent flow_abandon
+          tradeCompleted = true;
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: failureReason,
+            action,
+            quantity: qty,
+            priceType
+          });
+          
           if (tradeSubmitAttemptCount > 1) {
-            Telemetry.emitRetry('trade_submit', tradeSubmitAttemptCount, {
-              reason: forcedFail ? 'controlled_failure_qty_gt_100' : 'mock_rejection'
-            });
+            Telemetry.emitRetry('trade_submit', tradeSubmitAttemptCount, { reason: failureReason });
           }
         } else {
+          // Success path
           statusEl.textContent = 'Order submitted successfully (mock).';
           statusEl.classList.add('text-green-700');
-          Telemetry.emit('trade_submit_success', {
+          
+          tradeCompleted = true;
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'success',
             action,
             priceType,
             quantity: qty,
             limitPrice: priceType === 'limit' ? limitPrice : null
           });
-          Telemetry.emit('flow_complete', { flowName: FLOW_NAME });
+          
           tradeSubmitAttemptCount = 0;
           tradeForm.reset();
           limitContainer.classList.add('hidden');

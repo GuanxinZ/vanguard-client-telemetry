@@ -268,7 +268,7 @@
         }
 
         const newUserId = `U${Math.floor(Math.random() * 100000)}`;
-        localStorage.setItem('userId', newUserId);
+        sessionStorage.setItem('userId', newUserId);
 
         onboardingComplete = true;
         Telemetry.emit('create_submit_success', {

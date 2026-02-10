@@ -121,14 +121,6 @@
       // TELEMETRY INITIALIZATION
       // ─────────────────────────────────────────────────────────────────────
       Telemetry.init('account_home');
-      Telemetry.attachBehavioralCapture();
-      const startTs = performance.now();
-      Telemetry.emit('page_view');
-
-      window.addEventListener('beforeunload', () => {
-        const dwellMs = Math.round(performance.now() - startTs);
-        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
-      });
 
       /**
        * ─────────────────────────────────────────────────────────────────────

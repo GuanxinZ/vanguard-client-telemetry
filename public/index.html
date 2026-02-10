@@ -143,17 +143,9 @@
       // Telemetry.init() automatically:
       //   - Generates/retrieves sessionId and userId
       //   - Attaches global behavioral listeners (clicks, scrolls, idle, etc.)
-      //   - Emits 'page_view' event
-      //   - Sets up beforeunload handler for dwell time and form abandonment
+      //   - Emits 'page_view' event (ONCE)
+      //   - Sets up beforeunload handler for page_view_end with dwellMs
       Telemetry.init('home');
-      Telemetry.attachBehavioralCapture();
-      const startTs = performance.now();
-      Telemetry.emit('page_view');
-
-      window.addEventListener('beforeunload', () => {
-        const dwellMs = Math.round(performance.now() - startTs);
-        Telemetry.sendBeacon('dwell_time', { ms: dwellMs });
-      });
 
       /**
        * ─────────────────────────────────────────────────────────────────────

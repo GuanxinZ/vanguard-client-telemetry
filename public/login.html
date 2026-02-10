@@ -215,7 +215,15 @@
         if (randomFail) {
           loginError.textContent = "System error. Try again."
           loginError.classList.remove("hidden");
+          
+          loginSuccessful = true; // Mark as completed to prevent flow_abandon
           Telemetry.emit('login_error', { reason: 'system_failure' });
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: 'system_failure'
+          });
+          
           if (loginAttemptCount > 1) {
             Telemetry.emitRetry('login', loginAttemptCount, { reason: 'system_failure' });
           }
@@ -226,7 +234,15 @@
         if (username === "" || pw === "" || pw.length < 3) {
           loginError.textContent = "Invalid username or password.";
           loginError.classList.remove("hidden");
+          
+          loginSuccessful = true; // Mark as completed to prevent flow_abandon
           Telemetry.emit('login_error', { reason: 'invalid_credentials' });
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: 'invalid_credentials'
+          });
+          
           if (loginAttemptCount > 1) {
             Telemetry.emitRetry('login', loginAttemptCount, { reason: 'invalid_credentials' });
           }
@@ -235,7 +251,11 @@
 
         loginSuccessful = true;
         Telemetry.emit('login_success', { username });
-        Telemetry.emit('flow_complete', { flowName: FLOW_NAME });
+        Telemetry.emit('flow_complete', {
+          flowName: FLOW_NAME,
+          status: 'success',
+          username
+        });
         window.location.href = "./account-home-page.html";
       });
     </script>

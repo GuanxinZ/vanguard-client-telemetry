@@ -43,11 +43,11 @@ const Telemetry = {
     this.baseContext = options;
     this._pageStartTime = performance.now();
 
-    if (!localStorage.getItem('sessionId')) {
-      localStorage.setItem('sessionId', `S${Date.now()}-${Math.floor(Math.random() * 10000)}`);
+    if (!sessionStorage.getItem('sessionId')) {
+      sessionStorage.setItem('sessionId', `S${Date.now()}-${Math.floor(Math.random() * 10000)}`);
     }
-    if (!localStorage.getItem('userId')) {
-      localStorage.setItem('userId', 'U-guest');
+    if (!sessionStorage.getItem('userId')) {
+      sessionStorage.setItem('userId', 'U-guest');
     }
 
     this.attachBehavioralCapture();
@@ -73,8 +73,8 @@ const Telemetry = {
   _buildEvent(eventType, metadata = {}) {
     const { id, ...restMetadata } = metadata;
     return {
-      sessionId: localStorage.getItem('sessionId'),
-      userId: localStorage.getItem('userId') || 'U-guest',
+      sessionId: sessionStorage.getItem('sessionId'),
+      userId: sessionStorage.getItem('userId') || 'U-guest',
       pageRoute: this.pageRoute,
       eventType,
       timestamp: new Date().toISOString(),
@@ -155,6 +155,13 @@ const Telemetry = {
       'click',
       (e) => {
         const target = e.target;
+        const tagName = target.tagName?.toLowerCase();
+
+        // NOISE FILTER: Ignore clicks on form inputs (tracked via field_change instead)
+        if (tagName === 'input' || tagName === 'select' || tagName === 'textarea') {
+          return;
+        }
+
         const elementKey = this._getElementKey(target);
         const now = performance.now();
 
@@ -170,7 +177,7 @@ const Telemetry = {
           this.emit('rage_click', {
             element: elementKey,
             clickCount: recentClicks.length,
-            tag: target.tagName?.toLowerCase(),
+            tag: tagName,
             id: target.id || undefined,
             text: (target.textContent || '').trim().slice(0, 50),
           });
@@ -178,7 +185,7 @@ const Telemetry = {
         }
 
         this.emit('click', {
-          tag: target.tagName?.toLowerCase(),
+          tag: tagName,
           id: target.id || target.name || undefined,
           role: target.getAttribute?.('role') || undefined,
           textLen: (target.textContent || '').trim().slice(0, 50).length,
