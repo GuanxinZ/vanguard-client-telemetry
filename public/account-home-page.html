@@ -13,6 +13,16 @@
     <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+    <!-- Auth Guard: Protect restricted pages from unauthenticated access -->
+    <script>
+      (function() {
+        const userId = sessionStorage.getItem('userId');
+        if (!userId || userId === 'U-guest') {
+          window.location.href = './login.html';
+        }
+      })();
+    </script>
+
     <a
       href="#main"
       class="sr-only focus:not-sr-only focus:ring-2 focus:ring-blue-500 focus:bg-white focus:text-blue-700 px-3 py-2 absolute left-4 top-4 z-50 rounded"
@@ -37,13 +47,13 @@
           </nav>
 
           <div class="flex items-center gap-3">
-            <a
-              href="./index.html"
-              class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-red-700 hover:text-red-700 transition"
+            <button
+              id="logoutBtn"
+              class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-red-700 hover:text-red-700 transition cursor-pointer"
               data-nav="logout"
             >
               Log Out
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -151,6 +161,30 @@
         const url = new URL(help.href, window.location.origin);
         url.searchParams.set('from', from);
         help.href = url.pathname + url.search;
+      }
+
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Logout Handler (Session Cleanup)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Critical Data Integrity Step:
+       *   - MUST clear sessionStorage before navigation to prevent session ID
+       *     inheritance by next user (corrupts telemetry data)
+       *   - Emit logout event for funnel tracking (did user logout vs. abandon?)
+       */
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          // Track logout intention
+          Telemetry.emit('logout_click');
+          
+          // CRITICAL: Clear session to prevent data contamination
+          sessionStorage.clear();
+          
+          // Redirect to landing page
+          window.location.href = './index.html';
+        });
       }
     </script>
   </body>

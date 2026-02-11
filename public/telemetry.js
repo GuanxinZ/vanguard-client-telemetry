@@ -34,6 +34,19 @@ const Telemetry = {
   _pageStartTime: null,
 
   /**
+   * Initialize or retrieve session ID (guarantees non-null return).
+   * @returns {string} Session ID
+   */
+  _initSession() {
+    let sid = sessionStorage.getItem('sessionId');
+    if (!sid) {
+      sid = `S${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      sessionStorage.setItem('sessionId', sid);
+    }
+    return sid;
+  },
+
+  /**
    * Initialize telemetry for a page.
    * @param {string} pageName - Route identifier (e.g., 'trade', 'login')
    * @param {object} options - Additional context to attach to all events
@@ -43,9 +56,7 @@ const Telemetry = {
     this.baseContext = options;
     this._pageStartTime = performance.now();
 
-    if (!sessionStorage.getItem('sessionId')) {
-      sessionStorage.setItem('sessionId', `S${Date.now()}-${Math.floor(Math.random() * 10000)}`);
-    }
+    this._initSession();
     if (!sessionStorage.getItem('userId')) {
       sessionStorage.setItem('userId', 'U-guest');
     }
@@ -69,11 +80,16 @@ const Telemetry = {
    *     ...baseContext (page-level attrs),
    *     metadata: {...} (event-specific data)
    *   }
+   * 
+   * Session ID Guarantee:
+   *   - Always retrieves from sessionStorage OR generates new session
+   *   - Prevents null sessionId in early page_view events (race condition fix)
    */
   _buildEvent(eventType, metadata = {}) {
     const { id, ...restMetadata } = metadata;
+    const sid = sessionStorage.getItem('sessionId') || this._initSession();
     return {
-      sessionId: sessionStorage.getItem('sessionId'),
+      sessionId: sid,
       userId: sessionStorage.getItem('userId') || 'U-guest',
       pageRoute: this.pageRoute,
       eventType,
@@ -89,10 +105,19 @@ const Telemetry = {
    * Emit a telemetry event.
    * @param {string} eventType - Event name
    * @param {object} metadata - Event-specific data
+   * 
+   * Flow Completion Handling:
+   *   - When flow_complete is emitted, marks form as "submitted" to prevent
+   *     false form_abandonment events for flows that complete with failure status
    */
   emit(eventType, metadata = {}) {
     const evt = this._buildEvent(eventType, metadata);
     console.log('📊 Telemetry:', eventType, metadata);
+
+    // Mark form as submitted when any flow completes (success or failure)
+    if (eventType === 'flow_complete') {
+      this._formSubmitted = true;
+    }
 
     fetch('/api/telemetry', {
       method: 'POST',
