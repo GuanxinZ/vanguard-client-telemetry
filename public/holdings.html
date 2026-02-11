@@ -226,7 +226,11 @@
           if (isTimeout) {
             statementsStatus.textContent = 'Request timed out. Please try again.';
             statementsStatus.className = 'mt-2 text-xs text-red-700';
-            Telemetry.emit('statements_error', { reason: 'timeout' });
+            Telemetry.emit('flow_complete', {
+              flowName: 'statements_download',
+              status: 'failure',
+              reason: 'timeout'
+            });
             Telemetry.emitTimeout('statements_download', { attempt: statementsAttemptCount });
             if (statementsAttemptCount > 1) {
               Telemetry.emitRetry('statements_download', statementsAttemptCount, { reason: 'timeout' });
@@ -234,7 +238,11 @@
           } else if (isUnavailable) {
             statementsStatus.textContent = 'We could not retrieve your statement. Please try again later.';
             statementsStatus.className = 'mt-2 text-xs text-red-700';
-            Telemetry.emit('statements_error', { reason: 'mock_unavailable' });
+            Telemetry.emit('flow_complete', {
+              flowName: 'statements_download',
+              status: 'failure',
+              reason: 'mock_unavailable'
+            });
             if (statementsAttemptCount > 1) {
               Telemetry.emitRetry('statements_download', statementsAttemptCount, { reason: 'mock_unavailable' });
             }
@@ -242,7 +250,10 @@
             // Success case (25%)
             statementsStatus.textContent = 'Your statement download has started (mock).';
             statementsStatus.className = 'mt-2 text-xs text-green-700';
-            Telemetry.emit('statements_success');
+            Telemetry.emit('flow_complete', {
+              flowName: 'statements_download',
+              status: 'success'
+            });
             statementsAttemptCount = 0;  // Reset on success
           }
         });
