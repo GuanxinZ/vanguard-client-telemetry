@@ -372,10 +372,12 @@
         if (fail) {
           contactStatus.textContent = 'Submission failed. Please try again.';
           contactStatus.className = 'text-sm text-red-700';
-          Telemetry.emit('contact_submit_error', {
-            source: 'help_page',
+          Telemetry.emit('flow_complete', {
+            flowName: 'contact_support',
+            status: 'failure',
+            reason: 'submission_error',
             category,
-            frustration_signal: true,
+            frustration_signal: true
           });
           if (contactAttemptCount > 1) {
             Telemetry.emitRetry('contact_submit', contactAttemptCount, { source: 'help_page', category });
@@ -383,9 +385,10 @@
         } else {
           contactStatus.textContent = 'Thanks! We received your message.';
           contactStatus.className = 'text-sm text-green-700';
-          Telemetry.emit('contact_submit_success', {
-            source: 'help_page',
-            category,
+          Telemetry.emit('flow_complete', {
+            flowName: 'contact_support',
+            status: 'success',
+            category
           });
           contactOpened = false;
           contactAttemptCount = 0;

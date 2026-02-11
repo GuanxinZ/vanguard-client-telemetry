@@ -236,7 +236,11 @@
 
         // Basic client-side validation to simulate friction
         if (!fullname || !email || !pwd || !cpwd || !termsChecked) {
-          Telemetry.emit('create_submit_error', { reason: 'missing_fields' });
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: 'missing_fields'
+          });
           if (createAttemptCount > 1) {
             Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'missing_fields' });
           }
@@ -246,7 +250,11 @@
         }
 
         if (pwd !== cpwd) {
-          Telemetry.emit('create_submit_error', { reason: 'password_mismatch' });
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: 'password_mismatch'
+          });
           if (createAttemptCount > 1) {
             Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'password_mismatch' });
           }
@@ -258,7 +266,11 @@
         // Simulate occasional backend failure to create frustration
         const fail = Math.random() < 0.25; // 25% chance
         if (fail) {
-          Telemetry.emit('create_submit_error', { reason: 'mock_backend_failure' });
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: 'mock_backend_failure'
+          });
           if (createAttemptCount > 1) {
             Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'mock_backend_failure' });
           }
@@ -271,11 +283,12 @@
         sessionStorage.setItem('userId', newUserId);
 
         onboardingComplete = true;
-        Telemetry.emit('create_submit_success', {
+        Telemetry.emit('flow_complete', {
+          flowName: FLOW_NAME,
+          status: 'success',
           hasFullname: !!fullname,
           emailLen: email.length
         });
-        Telemetry.emit('flow_complete', { flowName: FLOW_NAME });
 
         formStatus.textContent = 'Account created successfully! Redirecting to login...';
         formStatus.className = 'text-sm text-green-700';

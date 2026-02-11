@@ -217,7 +217,6 @@
           loginError.classList.remove("hidden");
           
           loginSuccessful = true; // Mark as completed to prevent flow_abandon
-          Telemetry.emit('login_error', { reason: 'system_failure' });
           Telemetry.emit('flow_complete', {
             flowName: FLOW_NAME,
             status: 'failure',
@@ -236,7 +235,6 @@
           loginError.classList.remove("hidden");
           
           loginSuccessful = true; // Mark as completed to prevent flow_abandon
-          Telemetry.emit('login_error', { reason: 'invalid_credentials' });
           Telemetry.emit('flow_complete', {
             flowName: FLOW_NAME,
             status: 'failure',
@@ -250,7 +248,6 @@
         }
 
         loginSuccessful = true;
-        Telemetry.emit('login_success', { username });
         Telemetry.emit('flow_complete', {
           flowName: FLOW_NAME,
           status: 'success',

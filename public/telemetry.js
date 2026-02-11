@@ -120,6 +120,48 @@ const Telemetry = {
   },
 
   /**
+   * ─────────────────────────────────────────────────────────────────────
+   * Metadata Extraction Helper (Noise Reduction)
+   * ─────────────────────────────────────────────────────────────────────
+   * 
+   * Extracts ONLY high-signal metadata from DOM elements.
+   * 
+   * AI-Relevant Fields:
+   *   - id: Element identifier (critical for tracking specific UI components)
+   *   - text: Element content (reveals user intent, e.g., "Submit" vs "Cancel")
+   *   - value: Form field data (for input analysis)
+   * 
+   * EXCLUDED Fields (Noise):
+   *   - tag: Redundant (AI doesn't care if it's a <div> or <button>)
+   *   - textLen: Derived metric (AI can count characters if needed)
+   *   - nodeType: Implementation detail (irrelevant to behavior)
+   *   - role: Accessibility metadata (not behavior-related)
+   */
+  _extractMetadata(element, options = {}) {
+    const metadata = {};
+    
+    // Element identifier (highest priority)
+    if (element.id) {
+      metadata.id = element.id;
+    }
+    
+    // Element text content (reveals user action context)
+    if (options.includeText !== false) {
+      const text = (element.textContent || '').trim().slice(0, 50);
+      if (text) {
+        metadata.text = text;
+      }
+    }
+    
+    // Form field value (for input analysis)
+    if (options.includeValue && element.value !== undefined) {
+      metadata.value = element.value;
+    }
+    
+    return metadata;
+  },
+
+  /**
    * Attach global behavioral capture for SDD-required metrics.
    * Captures: rage clicks, scroll depth, idle time, refocus, errors, form abandonment.
    */
@@ -177,19 +219,18 @@ const Telemetry = {
           this.emit('rage_click', {
             element: elementKey,
             clickCount: recentClicks.length,
-            tag: tagName,
             id: target.id || undefined,
             text: (target.textContent || '').trim().slice(0, 50),
           });
           clickHistory.set(elementKey, []);
         }
 
-        this.emit('click', {
-          tag: tagName,
-          id: target.id || target.name || undefined,
-          role: target.getAttribute?.('role') || undefined,
-          textLen: (target.textContent || '').trim().slice(0, 50).length,
-        });
+        // DISABLED: Generic click events are redundant with flow_step/flow_complete tracking.
+        // Rage clicks are still captured above. Re-enable if CTA-specific tracking is needed.
+        // this.emit('click', {
+        //   id: target.id || target.name || undefined,
+        //   text: (target.textContent || '').trim().slice(0, 50),
+        // });
       },
       true
     );
