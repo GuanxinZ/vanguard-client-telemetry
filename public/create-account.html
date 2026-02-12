@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 backdrop-blur">
@@ -103,6 +104,34 @@
     </footer>
 
     <script>
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * ONBOARDING FLOW (USER JOURNEY INSTRUMENTATION)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Journey Type: Account Creation (New User Acquisition Funnel)
+       * 
+       * Business Context:
+       *   The onboarding flow converts anonymous visitors into registered users.
+       *   Drop-offs here directly impact user acquisition costs (CAC) and growth metrics.
+       * 
+       * Telemetry Schema (Universal Journey Pattern):
+       *   1. flow_start: Marks when user begins account creation
+       *   2. flow_step: Tracks field-level progression (name → email → password → confirm)
+       *   3. flow_abandon: Captures exit (page close or navigation away)
+       *   4. flow_complete: Success event (account created)
+       * 
+       * Step Tracking Logic:
+       *   - Steps are field-based (not page-based like trade.html)
+       *   - Each field focus advances step counter (prevents duplicate events)
+       *   - Map structure enables easy lookup: STEP_FIELDS[fieldId] → {stepIndex, stepName}
+       * 
+       * Abandonment Detection:
+       *   - Implicit: beforeunload fires if flowStarted but not onboardingComplete
+       *   - Also benefits from telemetry.js form_abandonment event (if fields touched)
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
       // --- Footer year ---
       document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -113,59 +142,91 @@
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Minimal telemetry + mock account creation ---
+      Telemetry.init('create_account');
 
-      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-
-      // user_id will be assigned after successful account creation
-      const existingUserId = localStorage.getItem('user_id');
-      const page = 'create_account';
-
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: localStorage.getItem('user_id') || existingUserId || 'U-unknown',
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          metadata
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // page view + dwell time
-      const startTs = performance.now();
-      emit('page_view');
-
-      window.addEventListener('beforeunload', () => {
-        const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', { ms: dwellMs });
-      });
+      const FLOW_NAME = 'onboarding';
+      const TOTAL_STEPS = 4;
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Field-to-Step Mapping (Declarative Step Tracking)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Maps form field IDs to journey steps. This pattern enables:
+       *   - Automatic step detection via focusin listener
+       *   - Easy maintenance (add new fields without modifying event logic)
+       *   - Consistent stepIndex values for funnel analysis
+       */
+      const STEP_FIELDS = {
+        fullname: { stepIndex: 1, stepName: 'enter_name' },
+        email: { stepIndex: 2, stepName: 'enter_email' },
+        password: { stepIndex: 3, stepName: 'create_password' },
+        'confirm-password': { stepIndex: 4, stepName: 'confirm_password' }
+      };
 
       const form = document.getElementById('createAccountForm');
       const formStatus = document.getElementById('formStatus');
-      let formOpened = false;
+      let flowStarted = false;
+      let onboardingComplete = false;
+      let currentStep = 0;
+      let createAttemptCount = 0;
 
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * ABANDONMENT: Implicit Exit (Page Close/Navigation)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Fires when user exits mid-onboarding without completing signup.
+       * Guards:
+       *   - flowStarted: Ensures flow_start was emitted (user engaged with form)
+       *   - !onboardingComplete: Prevents firing after successful submission
+       */
+      window.addEventListener('beforeunload', () => {
+        if (flowStarted && !onboardingComplete) {
+          Telemetry.sendBeacon('flow_abandon', {
+            flowName: FLOW_NAME,
+            reason: 'page_unload',
+            lastStep: currentStep
+          });
+        }
+      });
+
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * FLOW START + STEP TRACKING: Lazy Initialization
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * flow_start is emitted on first field interaction (not page load) to
+       * exclude users who land on page but never engage (reduces noise in funnel).
+       * 
+       * Step progression logic:
+       *   - Looks up field in STEP_FIELDS map
+       *   - Only advances if stepIndex > currentStep (prevents duplicate events)
+       *   - Allows non-linear navigation (e.g., user clicks password first → Step 3)
+       */
       form.addEventListener('focusin', (e) => {
-        if (!formOpened) {
-          formOpened = true;
-          emit('create_form_open');
-          // If form opened but not submitted after 90s → possible abandonment
-          setTimeout(() => {
-            if (formOpened) {
-              emit('abandon_create_form', { after_s: 90 });
-            }
-          }, 90000);
+        if (!flowStarted) {
+          flowStarted = true;
+          Telemetry.emit('flow_start', { flowName: FLOW_NAME });
         }
 
-        if (e.target.id) {
-          emit('field_focus', { field: e.target.id });
+        if (e.target.id && STEP_FIELDS[e.target.id]) {
+          const stepInfo = STEP_FIELDS[e.target.id];
+          if (stepInfo.stepIndex > currentStep) {
+            currentStep = stepInfo.stepIndex;
+            Telemetry.emit('flow_step', {
+              flowName: FLOW_NAME,
+              stepName: stepInfo.stepName,
+              stepIndex: stepInfo.stepIndex,
+              totalSteps: TOTAL_STEPS
+            });
+          }
+          Telemetry.emit('field_focus', { field: e.target.id });
         }
       });
 
       form.addEventListener('submit', (e) => {
         e.preventDefault();
+        createAttemptCount += 1;
 
         const fullname = document.getElementById('fullname').value.trim();
         const email = document.getElementById('email').value.trim();
@@ -175,14 +236,28 @@
 
         // Basic client-side validation to simulate friction
         if (!fullname || !email || !pwd || !cpwd || !termsChecked) {
-          emit('create_submit_error', { reason: 'missing_fields' });
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: 'missing_fields'
+          });
+          if (createAttemptCount > 1) {
+            Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'missing_fields' });
+          }
           formStatus.textContent = 'Please fill in all fields and accept the terms.';
           formStatus.className = 'text-sm text-red-700';
           return;
         }
 
         if (pwd !== cpwd) {
-          emit('create_submit_error', { reason: 'password_mismatch' });
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: 'password_mismatch'
+          });
+          if (createAttemptCount > 1) {
+            Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'password_mismatch' });
+          }
           formStatus.textContent = 'Passwords do not match.';
           formStatus.className = 'text-sm text-red-700';
           return;
@@ -191,25 +266,35 @@
         // Simulate occasional backend failure to create frustration
         const fail = Math.random() < 0.25; // 25% chance
         if (fail) {
-          emit('create_submit_error', { reason: 'mock_backend_failure' });
+          Telemetry.emit('flow_complete', {
+            flowName: FLOW_NAME,
+            status: 'failure',
+            reason: 'mock_backend_failure'
+          });
+          if (createAttemptCount > 1) {
+            Telemetry.emitRetry('create_account', createAttemptCount, { reason: 'mock_backend_failure' });
+          }
           formStatus.textContent = 'Account creation failed. Please try again.';
           formStatus.className = 'text-sm text-red-700';
           return;
         }
 
-        // "Successful" account creation: assign a user_id and redirect to login
         const newUserId = `U${Math.floor(Math.random() * 100000)}`;
-        localStorage.setItem('user_id', newUserId);
+        sessionStorage.setItem('userId', newUserId);
 
-        emit('create_submit_success', {
-          has_fullname: !!fullname,
-          email_len: email.length
+        onboardingComplete = true;
+        Telemetry.emit('flow_complete', {
+          flowName: FLOW_NAME,
+          status: 'success',
+          hasFullname: !!fullname,
+          emailLen: email.length
         });
 
         formStatus.textContent = 'Account created successfully! Redirecting to login...';
         formStatus.className = 'text-sm text-green-700';
 
-        formOpened = false;
+        flowStarted = false;
+        createAttemptCount = 0;
 
         setTimeout(() => {
           window.location.href = './login.html';

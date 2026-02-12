@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <a
@@ -103,49 +104,70 @@
     </footer>
 
     <script>
-      // --- Basic footer + Help link context ---
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * HOME PAGE (LANDING/ENTRY POINT)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Page Purpose: Marketing landing page and primary entry point for unauthenticated users.
+       * 
+       * Telemetry Objectives:
+       *   1. Measure engagement with call-to-action (CTA) buttons
+       *   2. Track which CTAs convert (header vs. hero section)
+       *   3. Capture behavioral signals (scroll depth, time on page, hesitation)
+       * 
+       * Key Events:
+       *   - page_view: Auto-captured by Telemetry.init()
+       *   - cta_click: Explicit tracking for conversion funnel analysis
+       *   - Global behavioral: Rage clicks, scroll depth, idle time (auto-captured)
+       * 
+       * Business Context:
+       *   Home page is the first touch point for new users. High drop-off rates
+       *   here indicate messaging problems or unclear value proposition.
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
+      // Basic setup
       document.getElementById('year').textContent = new Date().getFullYear();
 
+      // Dynamic Help link context (tells help page where user came from)
       const help = document.getElementById('helpLink');
       if (help) {
         const from = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
         help.href = `./help.html?from=${from}`;
       }
 
-      // --- Minimal telemetry for behavioral metrics on home page ---
-      const sessionId = localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-      const userId = localStorage.getItem('user_id') || 'U-guest';
-      localStorage.setItem('user_id', userId);
-      const page = 'home';
+      // ─────────────────────────────────────────────────────────────────────
+      // TELEMETRY INITIALIZATION
+      // ─────────────────────────────────────────────────────────────────────
+      // Telemetry.init() automatically:
+      //   - Generates/retrieves sessionId and userId
+      //   - Attaches global behavioral listeners (clicks, scrolls, idle, etc.)
+      //   - Emits 'page_view' event (ONCE)
+      //   - Sets up beforeunload handler for page_view_end with dwellMs
+      Telemetry.init('home');
 
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: userId,
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          metadata,
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // page view + dwell time
-      const startTs = performance.now();
-      emit('page_view');
-
-      window.addEventListener('beforeunload', () => {
-        const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', { ms: dwellMs });
-      });
-
-      // CTA clicks (top-right + hero buttons)
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * CTA CLICK TRACKING (Conversion Funnel)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Measure which CTAs drive conversions (Login vs. Create Account)
+       * 
+       * Tracking Strategy:
+       *   - Header buttons: login_header, create_header
+       *   - Hero section buttons: login_main, create_main
+       * 
+       * Why This Matters:
+       *   If 90% of clicks come from hero section, header nav might need redesign.
+       *   If create_account CTAs get more clicks than login, indicates strong
+       *   acquisition but potential retention issues.
+       */
       function trackClick(elId, target) {
         const el = document.getElementById(elId);
         if (!el) return;
         el.addEventListener('click', () => {
-          emit('cta_click', { target });
+          Telemetry.emit('cta_click', { target });
         });
       }
 

@@ -13,6 +13,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <script src="telemetry.js"></script>
   </head>
   <body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100">
     <!-- Header -->
@@ -215,53 +216,64 @@
     </footer>
 
     <script>
+      /**
+       * ═══════════════════════════════════════════════════════════════════════
+       * HELP PAGE (SELF-SERVICE SUPPORT)
+       * ═══════════════════════════════════════════════════════════════════════
+       * 
+       * Page Purpose: Self-service support center with FAQs, search, and escalation options.
+       * 
+       * Telemetry Objectives:
+       *   1. Capture sentiment-adjacent signals (help visits indicate confusion/frustration)
+       *   2. Measure self-service effectiveness (which FAQs resolve issues?)
+       *   3. Track escalation patterns (when do users give up and request human support?)
+       * 
+       * Key Events:
+       *   - page_view: Auto-captured (with from_page context to identify source of confusion)
+       *   - help_search: Captures search terms (reveals common pain points)
+       *   - faq_open/faq_close: Measures engagement with self-help content
+       *   - faq_solved: User self-reports issue resolution (success metric)
+       *   - contact_open: User starts escalation (indicates self-service failure)
+       *   - contact_submit_error: Form failures compound frustration
+       *   - escalation_click: Critical signal of user giving up (high-value support lead)
+       * 
+       * Business Context:
+       *   Help page visits correlate with user frustration. High traffic here without
+       *   corresponding increase in FAQs "solved" indicates content gaps or usability issues.
+       *   Escalation events predict support ticket volume (early warning system).
+       * 
+       * SDD Reference:
+       *   - §5.2: Sentiment-adjacent events (help visits, escalation clicks)
+       *   - §6.1.1: Form abandonment indicators (contact form)
+       * ═══════════════════════════════════════════════════════════════════════
+       */
+
       document.getElementById('year').textContent = new Date().getFullYear();
 
-      // --- Minimal telemetry helpers (emit to console for now) ---
-      const sessionId =
-        localStorage.getItem('session_id') || `S${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('session_id', sessionId);
-
-      const userId = localStorage.getItem('user_id') || 'U-mock';
-      localStorage.setItem('user_id', userId);
-
-      const page = 'help';
-
-      // Read ?from=... to know which page sent the user here
+      // ─────────────────────────────────────────────────────────────────────
+      // CONTEXT PROPAGATION: Track which page sent user to help
+      // ─────────────────────────────────────────────────────────────────────
+      // URL format: help.html?from=trade.html
+      // This enables analysis like: "80% of help visits come from trade page"
       const params = new URLSearchParams(window.location.search);
       const fromPage = params.get('from') || 'unknown';
+      Telemetry.init('help', { from_page: fromPage, source: 'help_page' });
 
-      function emit(event_type, metadata = {}) {
-        const evt = {
-          session_id: sessionId,
-          user_id: userId,
-          page,
-          event_type,
-          timestamp: new Date().toISOString(),
-          from_page: fromPage,
-          ...metadata,
-        };
-        console.log('Telemetry:', evt);
-      }
-
-      // page view + dwell time
-      const startTs = performance.now();
-      emit('page_view', { source: 'help_page' });
-
-      window.addEventListener('beforeunload', () => {
-        const dwellMs = Math.round(performance.now() - startTs);
-        emit('dwell_time', {
-          source: 'help_page',
-          ms: dwellMs,
-        });
-      });
-
-      // search
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Help Search Tracking
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Capture what users are searching for (reveals knowledge gaps).
+       * 
+       * Privacy Note: We only track query length, not actual search terms
+       * (to avoid capturing PII like "How do I recover account for john@email.com")
+       */
       const helpSearchForm = document.getElementById('helpSearchForm');
       helpSearchForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const q = (new FormData(helpSearchForm).get('q') || '').trim();
-        emit('help_search', {
+        Telemetry.emit('help_search', {
           source: 'help_page',
           q_len: q.length,
           has_terms: q.length > 0,
@@ -269,13 +281,26 @@
         alert('Mock search submitted.');
       });
 
-      // faq open/close & solved
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * FAQ Interaction Tracking
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Tracked Events:
+       *   - faq_open: User expands an FAQ (measures interest)
+       *   - faq_close: User collapses FAQ (measures engagement duration)
+       *   - faq_solved: User clicks "Did this solve your problem?" YES button
+       * 
+       * Success Metric: faq_solved / faq_open ratio
+       *   High ratio = effective self-service content
+       *   Low ratio = content doesn't answer user's actual question
+       */
       document.getElementById('faqList').addEventListener(
         'toggle',
         (e) => {
           if (e.target.tagName.toLowerCase() === 'details') {
             const id = e.target.dataset.faqId;
-            emit(e.target.open ? 'faq_open' : 'faq_close', {
+            Telemetry.emit(e.target.open ? 'faq_open' : 'faq_close', {
               source: 'help_page',
               faq_id: id,
             });
@@ -287,7 +312,7 @@
       document.getElementById('faqList').addEventListener('click', (e) => {
         if (e.target.dataset.action === 'faq-solved') {
           const wrapper = e.target.closest('details');
-          emit('faq_solved', {
+          Telemetry.emit('faq_solved', {
             source: 'help_page',
             faq_id: wrapper?.dataset.faqId,
           });
@@ -295,7 +320,26 @@
         }
       });
 
-      // contact: open (first focus), submit with random failure
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Contact Form Tracking (Escalation Funnel)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Measure when self-service fails and users need human support.
+       * 
+       * Tracked Events:
+       *   - contact_open: User starts filling contact form (frustration signal)
+       *   - abandon_contact_form: User leaves form without submitting (after 90s)
+       *   - contact_submit_error: Form submission fails (25% mock failure rate)
+       *   - contact_submit_success: Form successfully submitted
+       * 
+       * Business Context:
+       *   Contact form usage = failure of self-service content. High volume here
+       *   indicates need for better FAQs, documentation, or UX improvements.
+       *   
+       *   Form submission errors compound frustration (user already confused, now
+       *   can't even ask for help). Critical UX failure point.
+       */
       const contactForm = document.getElementById('contactForm');
       const contactStatus = document.getElementById('contactStatus');
       let contactOpened = false;
@@ -303,12 +347,11 @@
       contactForm.addEventListener('focusin', () => {
         if (!contactOpened) {
           contactOpened = true;
-          emit('contact_open', { source: 'help_page' });
+          Telemetry.emit('contact_open', { source: 'help_page' });
 
-          // abandon timer (e.g., no submit within 90s)
           setTimeout(() => {
             if (contactOpened) {
-              emit('abandon_contact_form', {
+              Telemetry.emit('abandon_contact_form', {
                 source: 'help_page',
                 after_s: 90,
                 frustration_signal: true,
@@ -318,8 +361,10 @@
         }
       });
 
+      let contactAttemptCount = 0;
       contactForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        contactAttemptCount += 1;
         const formData = new FormData(contactForm);
         const category = formData.get('category') || 'unknown';
 
@@ -327,28 +372,55 @@
         if (fail) {
           contactStatus.textContent = 'Submission failed. Please try again.';
           contactStatus.className = 'text-sm text-red-700';
-          emit('contact_submit_error', {
-            source: 'help_page',
+          Telemetry.emit('flow_complete', {
+            flowName: 'contact_support',
+            status: 'failure',
+            reason: 'submission_error',
             category,
-            frustration_signal: true,
+            frustration_signal: true
           });
+          if (contactAttemptCount > 1) {
+            Telemetry.emitRetry('contact_submit', contactAttemptCount, { source: 'help_page', category });
+          }
         } else {
           contactStatus.textContent = 'Thanks! We received your message.';
           contactStatus.className = 'text-sm text-green-700';
-          emit('contact_submit_success', {
-            source: 'help_page',
-            category,
+          Telemetry.emit('flow_complete', {
+            flowName: 'contact_support',
+            status: 'success',
+            category
           });
           contactOpened = false;
+          contactAttemptCount = 0;
           contactForm.reset();
         }
       });
 
-      // escalation clicks (chat / call / secure msg)
+      /**
+       * ─────────────────────────────────────────────────────────────────────
+       * Escalation Button Tracking (High-Value Support Signals)
+       * ─────────────────────────────────────────────────────────────────────
+       * 
+       * Purpose: Capture when users choose expensive support channels.
+       * 
+       * Escalation Channels:
+       *   - chat: Live chat (medium cost, instant)
+       *   - call: Phone support (high cost, synchronous)
+       *   - secure_message: Async messaging (low cost, delayed)
+       * 
+       * Why This Matters:
+       *   Each escalation click represents:
+       *     1. Failed self-service (cost of content gap)
+       *     2. Incoming support demand (staffing forecast)
+       *     3. High frustration signal (risk of churn)
+       * 
+       *   Phase 2 Analysis: Correlate escalation_click with prior events to
+       *   identify friction points (e.g., 60% of escalations after trade errors)
+       */
       document.querySelectorAll('[data-escalation]').forEach((a) => {
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          emit('escalation_click', {
+          Telemetry.emit('escalation_click', {
             source: 'help_page',
             channel: a.dataset.escalation,
             escalation_type: a.dataset.escalationType || 'standard',
