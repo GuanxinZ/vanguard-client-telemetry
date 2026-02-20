@@ -16,13 +16,25 @@ export type EventType =
   | 'session_start'
   | 'session_end';
 
-export interface EventLog {
-  ts: string;
-  session_id: string;
+/** Internal shape passed to SessionLogger.log() */
+export interface EventLogInput {
+  event_type: EventType | string;
   scenario: ScenarioType;
-  event_type: EventType;
   url: string;
   selector?: string;
+  metadata: Record<string, any>;
+}
+
+/** Phase 1–compatible NDJSON output (camelCase, same as server.js / telemetry.js) */
+export interface Phase1EventLog {
+  serverReceivedAt: string;
+  sessionId: string;
+  userId: string;
+  pageRoute: string;
+  eventType: string;
+  timestamp: string;
+  url: string;
+  elementId?: string;
   metadata: Record<string, any>;
 }
 

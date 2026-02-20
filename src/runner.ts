@@ -51,7 +51,13 @@ async function runSingleSession(
   const page: Page = await context.newPage();
 
   const sessionId = generateSessionId(sessionIndex);
-  const logger = new SessionLogger(sessionId, outputFile);
+  const userId = `U-playwright-${sessionIndex}`;
+  const logger = new SessionLogger({
+    sessionId,
+    outputFile,
+    userId,
+    baseUrl: config.baseUrl,
+  });
 
   try {
     console.log(`[Session ${sessionIndex}] Running scenario: ${scenario}`);

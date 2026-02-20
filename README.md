@@ -103,7 +103,9 @@ This repo includes a **Playwright-based runner** that simulates different user b
 
 - **4 scenarios**: `normal_user`, `frustrated_user`, `lost_user`, `error_user` (mix configurable)
 - **Events**: session_start, page_navigation, click, rage_click, scroll, idle, mouse_move, u_turn, refocus, network_error, console_error, session_end
-- **Output**: One NDJSON file (e.g. `full_results.json` or custom name) with one JSON object per line
+- **Output**: Events use the **same schema as Phase 1** (camelCase: `serverReceivedAt`, `sessionId`, `userId`, `pageRoute`, `eventType`, `timestamp`, `url`, `metadata`).
+- **Phase 1 replication**: When you run with `--baseUrl` pointing at the Phase 1 server (e.g. `http://localhost:3000`), each event is **POSTed to `POST /api/telemetry`** and appended to **`logs/telemetry_logs.ndjson`** — the same file and format as manual/browser usage. So Playwright **automates data collection** into the Phase 1 pipeline.
+- Optional: you can also write a separate NDJSON file via `--output` (e.g. for backup or offline runs).
 
 ### Prerequisites
 
@@ -132,11 +134,13 @@ npm start
 # Server runs at http://localhost:3000
 ```
 
-2. **In another terminal**, run the Playwright sessions:
+2. **In another terminal**, run the Playwright sessions (events will be sent to the server and appended to `logs/telemetry_logs.ndjson`):
 
 ```bash
 node run.js --baseUrl http://localhost:3000 --sessions 20 --output full_results.jsonl
 ```
+
+To **only** send to the Phase 1 server (no separate file), omit `--output`; the runner will still use a default filename for local copy.
 
 ### Options
 
