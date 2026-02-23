@@ -447,7 +447,6 @@
         if (!symbol) {
           statusEl.textContent = 'Please enter a symbol or fund name.';
           statusEl.classList.add('text-red-700');
-          Telemetry.emit('trade_step_error', { step: 1, reason: 'missing_symbol' });
           return false;
         }
         return true;
@@ -470,7 +469,6 @@
         if (missing.length > 0) {
           statusEl.textContent = 'Please fill out all required fields.';
           statusEl.classList.add('text-red-700');
-          Telemetry.emit('trade_step_error', { step: 2, reason: 'validation', missing_fields: missing });
           return false;
         }
         return true;
@@ -538,7 +536,6 @@
         tradeSubmitAttemptCount += 1;
 
         if (!validateStep1() || !validateStep2()) {
-          Telemetry.emit('trade_submit_error', { reason: 'validation_on_confirm' });
           if (tradeSubmitAttemptCount > 1) {
             Telemetry.emitRetry('trade_submit', tradeSubmitAttemptCount, { reason: 'validation_on_confirm' });
           }

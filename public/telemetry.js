@@ -107,15 +107,15 @@ const Telemetry = {
    * @param {object} metadata - Event-specific data
    * 
    * Flow Completion Handling:
-   *   - When flow_complete is emitted, marks form as "submitted" to prevent
-   *     false form_abandonment events for flows that complete with failure status
+   *   - When flow_complete or flow_abandon is emitted, marks form as "submitted" 
+   *     to prevent false form_abandonment events
    */
   emit(eventType, metadata = {}) {
     const evt = this._buildEvent(eventType, metadata);
     console.log('📊 Telemetry:', eventType, metadata);
 
-    // Mark form as submitted when any flow completes (success or failure)
-    if (eventType === 'flow_complete') {
+    // Mark form as submitted when flow completes or is abandoned (prevents duplicate abandonment events)
+    if (eventType === 'flow_complete' || eventType === 'flow_abandon') {
       this._formSubmitted = true;
     }
 
@@ -129,6 +129,12 @@ const Telemetry = {
   sendBeacon(eventType, metadata = {}) {
     const evt = this._buildEvent(eventType, metadata);
     const blob = new Blob([JSON.stringify(evt)], { type: 'application/json' });
+    
+    // Mark form as submitted when flow completes or is abandoned (prevents duplicate abandonment events)
+    if (eventType === 'flow_complete' || eventType === 'flow_abandon') {
+      this._formSubmitted = true;
+    }
+    
     if (navigator.sendBeacon) {
       navigator.sendBeacon('/api/telemetry', blob);
     } else {
