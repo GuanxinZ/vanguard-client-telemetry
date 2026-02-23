@@ -15,7 +15,11 @@
     "type": "git",
     "url": "git+https://github.com/GuanxinZ/vanguard-client-telemetry.git"
   },
-  "keywords": ["telemetry", "playwright", "automation"],
+  "keywords": [
+    "telemetry",
+    "playwright",
+    "automation"
+  ],
   "author": "",
   "license": "ISC",
   "bugs": {
@@ -23,6 +27,7 @@
   },
   "homepage": "https://github.com/GuanxinZ/vanguard-client-telemetry#readme",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.996.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "playwright": "^1.40.0"

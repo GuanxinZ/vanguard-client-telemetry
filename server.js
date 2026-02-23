@@ -35,8 +35,10 @@
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { startAutomatedSync, uploadOnShutdown } from './s3Uploader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,7 +81,7 @@ app.use(express.static(path.join(__dirname, 'public')));  // Serve HTML/CSS/JS f
 // 
 // Response: { status: 'success' } or { status: 'error' }
 // ─────────────────────────────────────────────────────────────────────────────
-app.post('/api/telemetry', (req, res) => {
+app.post('/api/telemetry', async (req, res) => {
   const eventData = req.body;
   
   // Add server-side timestamp (for clock skew detection and latency analysis)
@@ -92,17 +94,18 @@ app.post('/api/telemetry', (req, res) => {
   const logString = JSON.stringify(logEntry) + '\n';
   const logPath = path.join(__dirname, 'logs', 'telemetry_logs.ndjson');
 
-  // Append to file (async, non-blocking)
-  fs.appendFile(logPath, logString, (err) => {
-    if (err) {
-      console.error('❌ Error writing to file:', err);
-      return res.status(500).json({ status: 'error' });
-    }
+  try {
+    // Append to file (async, non-blocking with fs.promises)
+    await fsPromises.appendFile(logPath, logString);
     
     // Console log for real-time monitoring during development
     console.log(`[Telemetry] ${eventData.eventType} | ${eventData.pageRoute}`);
     res.json({ status: 'success' });
-  });
+  } catch (err) {
+    // Error isolation: S3 sync failures won't affect telemetry ingestion
+    console.error('❌ Error writing to file:', err);
+    res.status(500).json({ status: 'error' });
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -112,4 +115,25 @@ app.listen(PORT, () => {
   console.log(`✓ Server running at http://localhost:${PORT}`);
   console.log(`✓ Telemetry endpoint: POST http://localhost:${PORT}/api/telemetry`);
   console.log(`✓ Log file: ${path.join(__dirname, 'logs', 'telemetry_logs.ndjson')}`);
+  
+  // Start automated S3 synchronization (uploads every 5 minutes)
+  startAutomatedSync(5);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GRACEFUL SHUTDOWN HANDLERS
+// ─────────────────────────────────────────────────────────────────────────────
+// Ensures final log upload before process termination
+process.on('SIGINT', async () => {
+  console.log('\n[Shutdown] Received SIGINT (Ctrl+C). Uploading remaining logs...');
+  await uploadOnShutdown();
+  console.log('[Shutdown] Graceful shutdown complete.');
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n[Shutdown] Received SIGTERM. Uploading remaining logs...');
+  await uploadOnShutdown();
+  console.log('[Shutdown] Graceful shutdown complete.');
+  process.exit(0);
 });
