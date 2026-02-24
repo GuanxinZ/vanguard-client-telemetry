@@ -20,26 +20,37 @@ This system demonstrates how synthetic client telemetry can be analyzed to infer
 ## 📁 Project Structure
 
 ```
-vanguard-client-telemetry-1/
+vanguard-client-telemetry/
 ├── server.js                      # Node.js ingestion server (Phase 1 backend)
+├── run.js                         # Playwright runner entry (node run.js ...)
+├── src/                           # Playwright scenarios & behaviors (TypeScript)
+│   ├── runner.ts                  # Session loop, scenario selection
+│   ├── scenarios.ts               # normal_user, frustrated_user, lost_user, error_user
+│   ├── behaviors.ts               # rageClick, mouse shake, scroll, refocus, etc.
+│   ├── logger.ts                  # SessionLogger → NDJSON
+│   ├── helpers.ts                 # findClickableElements, randomDelay, etc.
+│   └── types.ts                   # ScenarioType, RunConfig, etc.
+├── dist/                          # Compiled JS (from npm run build)
 ├── public/
-│   ├── telemetry.js              # ⭐ Core SDK - behavioral capture & event emission
-│   ├── index.html                # Landing page (marketing/entry point)
-│   ├── login.html                # 2-step authentication flow
-│   ├── create-account.html       # 4-step onboarding flow
-│   ├── trade.html                # 3-step trading workflow (high-value funnel)
-│   ├── holdings.html             # Portfolio dashboard (retry/timeout demo)
-│   ├── help.html                 # Self-service support (sentiment signals)
-│   ├── account-home-page.html    # Post-login dashboard
-│   └── style.css                 # Tailwind CSS styling
+│   ├── telemetry.js               # ⭐ Core SDK - behavioral capture & event emission
+│   ├── index.html                 # Landing page (marketing/entry point)
+│   ├── login.html                 # 2-step authentication flow
+│   ├── create-account.html        # 4-step onboarding flow
+│   ├── trade.html                 # 3-step trading workflow (high-value funnel)
+│   ├── holdings.html              # Portfolio dashboard (retry/timeout demo)
+│   ├── help.html                  # Self-service support (sentiment signals)
+│   ├── account-home-page.html     # Post-login dashboard
+│   └── style.css                  # Tailwind CSS styling
 ├── logs/
-│   └── telemetry_logs.ndjson     # Event storage (newline-delimited JSON)
+│   └── telemetry_logs.ndjson      # Event storage (newline-delimited JSON)
 ├── docs/
-│   ├── TELEMETRY_METRICS.md      # Complete event catalog
-│   ├── FLOW_TELEMETRY_SCHEMA.md  # Universal journey tracking schema
-│   ├── NAMING_MIGRATION.md       # camelCase schema migration guide
+│   ├── TELEMETRY_METRICS.md       # Complete event catalog
+│   ├── FLOW_TELEMETRY_SCHEMA.md   # Universal journey tracking schema
+│   ├── NAMING_MIGRATION.md        # camelCase schema migration guide
 │   └── VanguardClientTelemetry_CI492_SDD.pdf  # Software Design Document
-└── package.json                   # Node.js dependencies
+├── PLAYWRIGHT_SYSTEM_DIAGRAM.md   # Flowchart: Playwright + Mock site + output
+├── tsconfig.json                  # TypeScript config (outDir: dist)
+└── package.json                   # Node.js dependencies (express, playwright, etc.)
 ```
 
 ---
@@ -81,6 +92,75 @@ cat logs/telemetry_logs.ndjson | jq -r '.eventType' | sort | uniq -c
 # Filter by session
 cat logs/telemetry_logs.ndjson | jq 'select(.sessionId == "S1234567890-5678")'
 ```
+
+---
+
+## 🎭 Playwright: Synthetic User Simulation
+
+This repo includes a **Playwright-based runner** that simulates different user behaviors (normal, frustrated, lost, error) and writes telemetry events to NDJSON. Use it to generate sample data for frustration detection and journey analysis without manual browsing.
+
+### What it does
+
+- **4 scenarios**: `normal_user`, `frustrated_user`, `lost_user`, `error_user` (mix configurable)
+- **Events**: session_start, page_navigation, click, rage_click, scroll, idle, mouse_move, u_turn, refocus, network_error, console_error, session_end
+- **Output**: Events use the **same schema as Phase 1** (camelCase: `serverReceivedAt`, `sessionId`, `userId`, `pageRoute`, `eventType`, `timestamp`, `url`, `metadata`).
+- **Phase 1 replication**: When you run with `--baseUrl` pointing at the Phase 1 server (e.g. `http://localhost:3000`), each event is **POSTed to `POST /api/telemetry`** and appended to **`logs/telemetry_logs.ndjson`** — the same file and format as manual/browser usage. So Playwright **automates data collection** into the Phase 1 pipeline.
+- Optional: you can also write a separate NDJSON file via `--output` (e.g. for backup or offline runs).
+
+### Prerequisites
+
+- Node.js v14+
+- **Chromium for Playwright** (install once):
+
+```bash
+npx playwright install chromium
+```
+
+### Build (TypeScript)
+
+```bash
+npm run build
+# or: npx tsc
+```
+
+This compiles `src/*.ts` to `dist/` (required before running the runner).
+
+### Run the Playwright runner
+
+1. **Start the Phase 1 server** (so the mock site is available):
+
+```bash
+npm start
+# Server runs at http://localhost:3000
+```
+
+2. **In another terminal**, run the Playwright sessions (events will be sent to the server and appended to `logs/telemetry_logs.ndjson`):
+
+```bash
+node run.js --baseUrl http://localhost:3000 --sessions 20 --output full_results.jsonl
+```
+
+To **only** send to the Phase 1 server (no separate file), omit `--output`; the runner will still use a default filename for local copy.
+
+### Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--baseUrl` | `http://localhost:8000` | Base URL of the mock website (use `http://localhost:3000` if using `npm start`) |
+| `--sessions` | `50` | Number of sessions to run |
+| `--scenarioMix` | `normal:0.4,frustrated:0.3,lost:0.2,error:0.1` | Scenario probability mix |
+| `--output` | `sessions_<timestamp>.jsonl` | Output NDJSON file path |
+
+### Example
+
+```bash
+# 10 sessions, custom mix, output to my_events.jsonl
+node run.js --baseUrl http://localhost:3000 --sessions 10 --scenarioMix normal:0.5,frustrated:0.3,lost:0.1,error:0.1 --output my_events.jsonl
+```
+
+### Architecture
+
+A flowchart of how Playwright, the mock website, and the logger interact is in [PLAYWRIGHT_SYSTEM_DIAGRAM.md](./PLAYWRIGHT_SYSTEM_DIAGRAM.md).
 
 ---
 
