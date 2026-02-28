@@ -1,5 +1,5 @@
 import { Page } from 'playwright';
-import { SessionLogger } from './logger.js';
+import { ITelemetryLogger } from './types.js';
 import { ElementInfo } from './types.js';
 import {
   findClickableElements,
@@ -17,7 +17,7 @@ import {
  */
 export async function rageClick(
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   element: ElementInfo,
   clickCount: number = 5
 ): Promise<void> {
@@ -59,7 +59,7 @@ export async function rageClick(
  */
 export async function performDeadClick(
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   element: ElementInfo
 ): Promise<void> {
   const beforeUrl = page.url();
@@ -90,7 +90,7 @@ export async function performDeadClick(
  */
 export async function performClick(
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   element: ElementInfo,
   scenario: string
 ): Promise<void> {
@@ -121,7 +121,7 @@ export async function performClick(
  */
 export async function refocusClick(
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   element: ElementInfo,
   scenario: string
 ): Promise<void> {

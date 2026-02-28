@@ -1,6 +1,5 @@
 import { Page, BrowserContext } from 'playwright';
-import { SessionLogger } from './logger.js';
-import { ScenarioType } from './types.js';
+import { ScenarioType, ITelemetryLogger } from './types.js';
 import {
   findClickableElements,
   randomChoice,
@@ -21,7 +20,7 @@ import {
  */
 export async function normalUserScenario(
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   baseUrl: string
 ): Promise<void> {
   logger.log({
@@ -108,7 +107,7 @@ export async function normalUserScenario(
  */
 export async function frustratedUserScenario(
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   baseUrl: string
 ): Promise<void> {
   logger.log({
@@ -180,7 +179,7 @@ export async function frustratedUserScenario(
  */
 export async function lostUserScenario(
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   baseUrl: string
 ): Promise<void> {
   logger.log({
@@ -282,7 +281,7 @@ export async function lostUserScenario(
  */
 export async function errorUserScenario(
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   baseUrl: string
 ): Promise<void> {
   logger.log({
@@ -425,7 +424,7 @@ export async function errorUserScenario(
 export async function runScenario(
   scenario: ScenarioType,
   page: Page,
-  logger: SessionLogger,
+  logger: ITelemetryLogger,
   baseUrl: string
 ): Promise<void> {
   switch (scenario) {
