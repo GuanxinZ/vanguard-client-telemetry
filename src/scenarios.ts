@@ -6,7 +6,8 @@ import {
   randomDelay,
   randomInt,
   simulateMouseShake,
-  simulateErraticScroll
+  simulateErraticScroll,
+  simulateScrollDepth
 } from './helpers.js';
 import {
   performClick,
@@ -16,7 +17,8 @@ import {
 } from './behaviors.js';
 
 /**
- * Normal user scenario: typical browsing behavior
+ * Normal user scenario: typical browsing behavior.
+ * Uses index + one of trade/holdings/account-home so telemetry sees multiple pageRoutes.
  */
 export async function normalUserScenario(
   page: Page,
@@ -30,13 +32,17 @@ export async function normalUserScenario(
     metadata: {}
   });
 
-  // Navigate to trade page
-  await page.goto(`${baseUrl}/trade.html`, { waitUntil: 'domcontentloaded' });
+  // Start at home then visit a content page (trade, holdings, account-home) so telemetry sees multiple pageRoutes
+  await page.goto(`${baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
+  await randomDelay(500, 1200);
+  const contentPages = ['trade.html', 'holdings.html', 'account-home-page.html'];
+  const mainPage = contentPages[Math.floor(Math.random() * contentPages.length)];
+  await page.goto(`${baseUrl}/${mainPage}`, { waitUntil: 'domcontentloaded' });
   logger.log({
     event_type: 'page_navigation',
     scenario: 'normal_user',
     url: page.url(),
-    metadata: { target_url: `${baseUrl}/trade.html` }
+    metadata: { target_url: `${baseUrl}/${mainPage}` }
   });
 
   // Initial hesitancy: wait before first interaction
@@ -124,11 +130,50 @@ export async function frustratedUserScenario(
     url: page.url(),
     metadata: { target_url: `${baseUrl}/trade.html` }
   });
+  await randomDelay(400, 900);
+  await page.goto(`${baseUrl}/help.html`, { waitUntil: 'domcontentloaded' });
+  logger.log({
+    event_type: 'page_navigation',
+    scenario: 'frustrated_user',
+    url: page.url(),
+    metadata: { target_url: `${baseUrl}/help.html` }
+  });
+  await randomDelay(300, 700);
+  // On help: scroll_depth + erratic scroll, then mouse shake (500ms window with direction flips)
+  await simulateScrollDepth(page);
+  logger.log({
+    event_type: 'scroll',
+    scenario: 'frustrated_user',
+    url: page.url(),
+    metadata: { behavior: 'scroll_depth' }
+  });
+  for (let i = 0; i < 3; i++) {
+    await simulateErraticScroll(page);
+    await randomDelay(100, 250);
+  }
+  logger.log({
+    event_type: 'scroll',
+    scenario: 'frustrated_user',
+    url: page.url(),
+    metadata: { behavior: 'erratic' }
+  });
+  await simulateMouseShake(page, randomInt(5, 8));
+  logger.log({
+    event_type: 'mouse_move',
+    scenario: 'frustrated_user',
+    url: page.url(),
+    metadata: { behavior: 'shake' }
+  });
 
-  // Short hesitancy (frustrated users act quickly)
+  await page.goto(`${baseUrl}/trade.html`, { waitUntil: 'domcontentloaded' });
+  logger.log({
+    event_type: 'page_navigation',
+    scenario: 'frustrated_user',
+    url: page.url(),
+    metadata: { target_url: `${baseUrl}/trade.html` }
+  });
+
   await randomDelay(500, 1500);
-
-  // Mouse shake
   await simulateMouseShake(page, randomInt(3, 7));
   logger.log({
     event_type: 'mouse_move',
@@ -138,23 +183,9 @@ export async function frustratedUserScenario(
   });
 
   const elements = await findClickableElements(page);
-  
-  // Rage click on a random element
   const targetElement = randomChoice(elements);
   if (targetElement) {
     await rageClick(page, logger, targetElement, randomInt(4, 8));
-  }
-
-  // Erratic scrolling
-  for (let i = 0; i < randomInt(3, 6); i++) {
-    await simulateErraticScroll(page);
-    logger.log({
-      event_type: 'scroll',
-      scenario: 'frustrated_user',
-      url: page.url(),
-      metadata: { behavior: 'erratic', iteration: i + 1 }
-    });
-    await randomDelay(200, 500);
   }
 
   // Try clicking multiple elements rapidly
@@ -189,16 +220,44 @@ export async function lostUserScenario(
     metadata: {}
   });
 
+  // U-turn (page-level A→B→A): use multiple pages so telemetry sees home, trade, holdings, etc.
+  const useHoldings = Math.random() > 0.5;
+  await page.goto(`${baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
+  logger.log({
+    event_type: 'page_navigation',
+    scenario: 'lost_user',
+    url: page.url(),
+    metadata: { target_url: `${baseUrl}/index.html`, purpose: 'u_turn_start' }
+  });
+  await randomDelay(800, 1500);
   await page.goto(`${baseUrl}/trade.html`, { waitUntil: 'domcontentloaded' });
   logger.log({
     event_type: 'page_navigation',
     scenario: 'lost_user',
     url: page.url(),
-    metadata: { target_url: `${baseUrl}/trade.html` }
+    metadata: { target_url: `${baseUrl}/trade.html`, purpose: 'u_turn_mid' }
+  });
+  await randomDelay(600, 1200);
+  if (useHoldings) {
+    await page.goto(`${baseUrl}/holdings.html`, { waitUntil: 'domcontentloaded' });
+    logger.log({
+      event_type: 'page_navigation',
+      scenario: 'lost_user',
+      url: page.url(),
+      metadata: { target_url: `${baseUrl}/holdings.html` }
+    });
+    await randomDelay(500, 1000);
+  }
+  await page.goto(`${baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
+  logger.log({
+    event_type: 'page_navigation',
+    scenario: 'lost_user',
+    url: page.url(),
+    metadata: { target_url: `${baseUrl}/index.html`, purpose: 'u_turn_back' }
   });
 
   // Long hesitancy (lost users hesitate)
-  const longHesitancy = randomInt(5000, 10000);
+  const longHesitancy = randomInt(2000, 5000);
   await randomDelay(longHesitancy, longHesitancy);
   logger.log({
     event_type: 'idle',
@@ -208,44 +267,21 @@ export async function lostUserScenario(
   });
 
   const elements = await findClickableElements(page);
-  if (elements.length < 2) return;
-
-  // U-turn: A -> B -> A
-  const elementA = randomChoice(elements);
-  const elementB = randomChoice(elements.filter(e => e !== elementA));
-  
-  if (elementA && elementB) {
-    const urlBefore = page.url();
-    
-    // Click A
-    await performClick(page, logger, elementA, 'lost_user');
-    await randomDelay(1000, 2000);
-    
-    // Click B (within 7 seconds for U-turn)
-    const urlAtB = page.url();
-    await performClick(page, logger, elementB, 'lost_user');
-    await randomDelay(500, 1500);
-    
-    // Go back to A (U-turn)
-    if (urlBefore === page.url() || Math.random() > 0.5) {
-      // Either same page or random chance to go back
-      const backElement = elements.find(e => 
-        e.text?.toLowerCase().includes('back') || 
+  if (elements.length >= 2) {
+    const elementA = randomChoice(elements);
+    const elementB = randomChoice(elements.filter(e => e !== elementA));
+    if (elementA && elementB) {
+      await performClick(page, logger, elementA, 'lost_user');
+      await randomDelay(1000, 2000);
+      await performClick(page, logger, elementB, 'lost_user');
+      await randomDelay(500, 1500);
+      const backElement = elements.find(e =>
+        e.text?.toLowerCase().includes('back') ||
         e.selector.includes('back') ||
         e === elementA
       );
-      
       if (backElement) {
         await performClick(page, logger, backElement, 'lost_user');
-        logger.log({
-          event_type: 'u_turn',
-          scenario: 'lost_user',
-          url: page.url(),
-          metadata: {
-            path: [elementA.selector, elementB.selector, backElement.selector],
-            duration_seconds: 7
-          }
-        });
       }
     }
   }
@@ -258,7 +294,6 @@ export async function lostUserScenario(
     await refocusClick(page, logger, refocusElement, 'lost_user');
   }
 
-  // Long pauses between actions
   const pause = randomInt(3000, 7000);
   await randomDelay(pause, pause);
   logger.log({
@@ -267,6 +302,9 @@ export async function lostUserScenario(
     url: page.url(),
     metadata: { duration_ms: pause, reason: 'confusion' }
   });
+
+  // 35s no activity so telemetry.js emits idle_time (30s threshold)
+  await randomDelay(35000, 36000);
 
   logger.log({
     event_type: 'session_end',
@@ -333,6 +371,19 @@ export async function errorUserScenario(
     }
   });
 
+  // Form abandonment: fill one field then navigate away without submit (telemetry.js sends form_abandonment on beforeunload)
+  await page.goto(`${baseUrl}/create-account.html`, { waitUntil: 'domcontentloaded' });
+  await page.locator('#fullname').first().fill('Test User').catch(() => {});
+  await randomDelay(300, 600);
+  await page.goto(`${baseUrl}/index.html`, { waitUntil: 'domcontentloaded' });
+  logger.log({
+    event_type: 'page_navigation',
+    scenario: 'error_user',
+    url: page.url(),
+    metadata: { purpose: 'form_abandonment_trigger' }
+  });
+  await randomDelay(500, 1000);
+
   // Try to navigate to a non-existent page (404)
   try {
     await page.goto(`${baseUrl}/nonexistent-page-404.html`, { 
@@ -352,7 +403,6 @@ export async function errorUserScenario(
     });
   }
 
-  // Navigate to trade page
   await page.goto(`${baseUrl}/trade.html`, { waitUntil: 'domcontentloaded' });
   logger.log({
     event_type: 'page_navigation',
@@ -360,19 +410,41 @@ export async function errorUserScenario(
     url: page.url(),
     metadata: { target_url: `${baseUrl}/trade.html` }
   });
-
-  const elements = await findClickableElements(page);
-  
-  // Try to submit invalid form data to trigger errors
   const symbolInput = page.locator('#symbol').first();
   if (await symbolInput.isVisible()) {
-    // Leave empty and try to proceed (should trigger validation error)
     const nextBtn = page.locator('#nextBtn').first();
     if (await nextBtn.isVisible()) {
       await nextBtn.click();
       await randomDelay(500, 1000);
     }
   }
+  await randomDelay(400, 800);
+  await page.goto(`${baseUrl}/create-account.html`, { waitUntil: 'domcontentloaded' });
+  logger.log({
+    event_type: 'page_navigation',
+    scenario: 'error_user',
+    url: page.url(),
+    metadata: { target_url: `${baseUrl}/create-account.html` }
+  });
+  await randomDelay(500, 1000);
+  await page.goto(`${baseUrl}/login.html`, { waitUntil: 'domcontentloaded' });
+  logger.log({
+    event_type: 'page_navigation',
+    scenario: 'error_user',
+    url: page.url(),
+    metadata: { target_url: `${baseUrl}/login.html` }
+  });
+
+  // Refocus: use keyboard Tab so focusout/focusin fire reliably; same field focused again within 5s -> refocus
+  await page.locator('#username').first().focus();
+  await page.locator('#username').first().fill('refocus_test').catch(() => {});
+  await randomDelay(200, 400);
+  await page.keyboard.press('Tab'); // move to password (blur username)
+  await randomDelay(400, 700);
+  await page.keyboard.press('Shift+Tab'); // back to username (refocus)
+  await randomDelay(200, 400);
+
+  const elements = await findClickableElements(page);
 
   // Try clicking disabled elements or out of bounds
   for (let i = 0; i < randomInt(2, 4); i++) {
@@ -401,7 +473,6 @@ export async function errorUserScenario(
     }
   }
 
-  // Retry failed actions
   const retryElement = randomChoice(elements);
   if (retryElement) {
     for (let i = 0; i < 3; i++) {
@@ -409,6 +480,14 @@ export async function errorUserScenario(
       await randomDelay(1000, 2000);
     }
   }
+
+  // Trigger system_error so telemetry.js emits (window.onerror)
+  await page.evaluate(() => {
+    setTimeout(() => {
+      throw new Error('telemetry_test_system_error');
+    }, 100);
+  });
+  await randomDelay(400, 600);
 
   logger.log({
     event_type: 'session_end',
