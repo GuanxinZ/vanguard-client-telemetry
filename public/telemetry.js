@@ -61,8 +61,27 @@ const Telemetry = {
       sessionStorage.setItem('userId', 'U-guest');
     }
 
+    // U-turn detection (AI metric #7): route history A -> B -> A
+    const routeHistoryKey = 'telemetry_route_history';
+    let routeHistory = [];
+    try {
+      const stored = sessionStorage.getItem(routeHistoryKey);
+      if (stored) routeHistory = JSON.parse(stored);
+    } catch (_) {}
+    routeHistory.push(pageName);
+    if (routeHistory.length > 5) routeHistory = routeHistory.slice(-5);
+    if (routeHistory.length >= 3 && routeHistory[routeHistory.length - 1] === routeHistory[routeHistory.length - 3]) {
+      this.emit('u_turn', { path: routeHistory.slice(-3) });
+    }
+    try {
+      sessionStorage.setItem(routeHistoryKey, JSON.stringify(routeHistory));
+    } catch (_) {}
+
     this.attachBehavioralCapture();
-    this.emit('page_view');
+    this.emit('page_view', {
+      pageRoute: this.pageRoute,
+      referrer: document.referrer || null
+    });
   },
 
   /**
@@ -250,12 +269,23 @@ const Telemetry = {
           clickHistory.set(elementKey, []);
         }
 
-        // DISABLED: Generic click events are redundant with flow_step/flow_complete tracking.
-        // Rage clicks are still captured above. Re-enable if CTA-specific tracking is needed.
-        // this.emit('click', {
-        //   id: target.id || target.name || undefined,
-        //   text: (target.textContent || '').trim().slice(0, 50),
-        // });
+        // Dead click: emit after short delay if URL and scroll did not change (AI metric #2)
+        const deadClickCheck = () => {
+          const urlBefore = window.location.href;
+          const scrollBefore = document.documentElement.scrollTop || document.body.scrollTop;
+          setTimeout(() => {
+            const urlAfter = window.location.href;
+            const scrollAfter = document.documentElement.scrollTop || document.body.scrollTop;
+            if (urlBefore === urlAfter && Math.abs(scrollBefore - scrollAfter) < 5) {
+              this.emit('dead_click', {
+                element: elementKey,
+                id: target.id || undefined,
+                text: (target.textContent || '').trim().slice(0, 50),
+              });
+            }
+          }, 350);
+        };
+        deadClickCheck();
       },
       true
     );
@@ -294,6 +324,32 @@ const Telemetry = {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
 
+    // Erratic scroll: direction flips in short window (AI metric #8)
+    const scrollHistory = [];
+    const ERRATIC_WINDOW_MS = 2000;
+    const ERRATIC_MIN_FLIPS = 3;
+    let lastErraticEmit = 0;
+    const onScrollErratic = () => {
+      const t = Date.now();
+      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+      scrollHistory.push({ t, scrollTop });
+      while (scrollHistory.length > 0 && t - scrollHistory[0].t > ERRATIC_WINDOW_MS) {
+        scrollHistory.shift();
+      }
+      if (scrollHistory.length < 4) return;
+      let flips = 0;
+      for (let i = 1; i < scrollHistory.length - 1; i++) {
+        const prev = scrollHistory[i].scrollTop - scrollHistory[i - 1].scrollTop;
+        const next = scrollHistory[i + 1].scrollTop - scrollHistory[i].scrollTop;
+        if ((prev > 0 && next < 0) || (prev < 0 && next > 0)) flips++;
+      }
+      if (flips >= ERRATIC_MIN_FLIPS && t - lastErraticEmit > 3000) {
+        lastErraticEmit = t;
+        this.emit('scroll', { behavior: 'erratic', directionChanges: flips });
+      }
+    };
+    window.addEventListener('scroll', onScrollErratic, { passive: true });
+
     const IDLE_THRESHOLD_MS = 30000;
     let idleTimer = null;
     let lastActivityTs = performance.now();
@@ -312,6 +368,41 @@ const Telemetry = {
     });
     window.addEventListener('scroll', resetIdleTimer, { passive: true });
     resetIdleTimer();
+
+    // Mouse shake / cursor velocity (AI metric #3): rapid direction changes
+    const mouseBuffer = [];
+    const MOUSE_WINDOW_MS = 500;
+    const MOUSE_THROTTLE_MS = 50;
+    let lastMouseEmit = 0;
+    let lastMouseTs = 0;
+    document.addEventListener(
+      'mousemove',
+      (e) => {
+        const now = Date.now();
+        if (now - lastMouseTs < MOUSE_THROTTLE_MS) return;
+        lastMouseTs = now;
+        mouseBuffer.push({ t: now, x: e.clientX, y: e.clientY });
+        while (mouseBuffer.length > 0 && now - mouseBuffer[0].t > MOUSE_WINDOW_MS) {
+          mouseBuffer.shift();
+        }
+        if (mouseBuffer.length < 5) return;
+        let flips = 0;
+        for (let i = 2; i < mouseBuffer.length; i++) {
+          const dx1 = mouseBuffer[i - 1].x - mouseBuffer[i - 2].x;
+          const dx2 = mouseBuffer[i].x - mouseBuffer[i - 1].x;
+          const dy1 = mouseBuffer[i - 1].y - mouseBuffer[i - 2].y;
+          const dy2 = mouseBuffer[i].y - mouseBuffer[i - 1].y;
+          if ((dx1 !== 0 && dx2 !== 0 && (dx1 > 0) !== (dx2 > 0)) || (dy1 !== 0 && dy2 !== 0 && (dy1 > 0) !== (dy2 > 0))) {
+            flips++;
+          }
+        }
+        if (flips >= 3 && now - lastMouseEmit > 2000) {
+          lastMouseEmit = now;
+          this.emit('mouse_move', { behavior: 'shake', iterations: flips });
+        }
+      },
+      { passive: true }
+    );
 
     let lastFocusedId = null;
     let lastBlurTs = 0;

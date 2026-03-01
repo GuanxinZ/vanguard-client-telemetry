@@ -16,6 +16,12 @@ export type EventType =
   | 'session_start'
   | 'session_end';
 
+/** Logger interface for scenarios (SessionLogger or NoOpLogger) */
+export interface ITelemetryLogger {
+  log(event: EventLogInput): void;
+  close(): void;
+}
+
 /** Internal shape passed to SessionLogger.log() */
 export interface EventLogInput {
   event_type: EventType | string;
@@ -50,6 +56,8 @@ export interface RunConfig {
   sessions: number;
   scenarioMix: ScenarioMix;
   outputFile?: string;
+  /** When true, do not send events from Node; only the page's telemetry.js will capture and POST (same as teammate's method). */
+  telemetryJsOnly?: boolean;
 }
 
 export interface ElementInfo {

@@ -1,5 +1,5 @@
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { SessionLogger } from './logger.js';
+import { SessionLogger, NoOpLogger } from './logger.js';
 import { RunConfig, ScenarioType, ScenarioMix } from './types.js';
 import { runScenario } from './scenarios.js';
 import { randomChoice } from './helpers.js';
@@ -52,12 +52,14 @@ async function runSingleSession(
 
   const sessionId = generateSessionId(sessionIndex);
   const userId = `U-playwright-${sessionIndex}`;
-  const logger = new SessionLogger({
-    sessionId,
-    outputFile,
-    userId,
-    baseUrl: config.baseUrl,
-  });
+  const logger = config.telemetryJsOnly
+    ? new NoOpLogger()
+    : new SessionLogger({
+        sessionId,
+        outputFile,
+        userId,
+        baseUrl: config.baseUrl,
+      });
 
   try {
     console.log(`[Session ${sessionIndex}] Running scenario: ${scenario}`);

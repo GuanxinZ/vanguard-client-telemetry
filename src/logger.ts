@@ -94,3 +94,12 @@ export class SessionLogger {
     }
   }
 }
+
+/**
+ * No-op logger for --telemetry-js-only mode: Playwright only drives the browser,
+ * all events are captured and sent by the page's telemetry.js (same as teammate's method).
+ */
+export class NoOpLogger {
+  log(_event: EventLogInput): void {}
+  close(): void {}
+}
