@@ -10,6 +10,7 @@ function parseArgs() {
   const config = {
     baseUrl: 'http://localhost:8000',
     sessions: 50,
+    concurrency: 4,
     scenarioMix: {
       normal: 0.4,
       frustrated: 0.3,
@@ -25,6 +26,9 @@ function parseArgs() {
     
     if (arg === '--baseUrl' && i + 1 < args.length) {
       config.baseUrl = args[i + 1];
+      i++;
+    } else if (arg === '--concurrency' && i + 1 < args.length) {
+      config.concurrency = Math.max(1, parseInt(args[i + 1], 10));
       i++;
     } else if (arg === '--sessions' && i + 1 < args.length) {
       config.sessions = parseInt(args[i + 1], 10);
@@ -66,12 +70,14 @@ Usage: node run.js [options]
 Options:
   --baseUrl <url>         Base URL of the website (default: http://localhost:8000)
   --sessions <number>     Number of sessions to run (default: 50)
+  --concurrency <number>  Max parallel browser sessions (default: 4)
   --scenarioMix <mix>     Scenario mix in format: normal:0.4,frustrated:0.3,lost:0.2,error:0.1
   --output <file>         Output file for logs (default: sessions_<timestamp>.jsonl)
   --telemetry-js-only     Use only page telemetry.js to capture events (no Node-side logging; same as teammate's method)
   --help, -h              Show this help message
 
-Example:
+Examples:
+  node run.js --sessions 1000 --concurrency 6
   node run.js --baseUrl http://localhost:8000 --sessions 50 --scenarioMix normal:0.4,frustrated:0.3,lost:0.2,error:0.1
       `);
       process.exit(0);

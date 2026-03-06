@@ -54,6 +54,7 @@ export interface ScenarioMix {
 export interface RunConfig {
   baseUrl: string;
   sessions: number;
+  concurrency?: number;
   scenarioMix: ScenarioMix;
   outputFile?: string;
   /** When true, do not send events from Node; only the page's telemetry.js will capture and POST (same as teammate's method). */
